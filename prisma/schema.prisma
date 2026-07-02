@@ -1,0 +1,1282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model MovimientoInventario {
+  id                 String                   @id @default(cuid())
+  fechaMovimiento    DateTime                 @default(now())
+  productoId         String
+  usuarioId          String
+  cantidad           Int
+  tipo               TipoMovimientoInventario
+  stockPrevio        Int
+  stockNuevo         Int
+  motivo             String                   @default("")
+  createdAt          DateTime                 @default(now()) @map("fechaCreacion")
+  updatedAt          DateTime                 @updatedAt @map("fechaActualizacion")
+  producto           producto                 @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario            usuario                  @relation(fields: [usuarioId], references: [id])
+
+  @@index([productoId], map: "movimientos_inventario_productoId_fkey")
+  @@index([usuarioId], map: "movimientos_inventario_usuarioId_fkey")
+  @@map("movimientos_inventario")
+}
+
+model ActividadUsuario {
+  id        String   @id @default(cuid())
+  usuarioId String
+  empresaId String
+  accion    String
+  detalles  String?  @db.LongText
+  timestamp DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  empresa   empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario   usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([empresaId])
+  @@index([timestamp])
+  @@index([accion])
+  @@map("actividad_usuario")
+}
+
+model MetaEmpresa {
+  id                 String    @id @default(cuid())
+  empresaId          String
+  periodo            String
+  objetivo           Float
+  createdAt          DateTime  @default(now()) @map("fechaCreacion")
+  updatedAt          DateTime  @updatedAt @map("fechaActualizacion")
+  activa             Boolean   @default(true)
+  cantidadVentas     Int       @default(0)
+  colorProgress      String?   @default("#3b82f6")
+  descripcion        String?
+  notificarEn        Int?      @default(80)
+  progresoActual     Float     @default(0)
+  tipo               TipoMeta  @default(INGRESOS)
+  ultimoCalculado    DateTime?
+  empresa            empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, periodo])
+  @@index([empresaId])
+  @@index([activa])
+  @@map("metas_empresa")
+}
+
+model AplicacionPlantilla {
+  id                     String                 @id @default(cuid())
+  plantillaId            String
+  empresaId              String
+  aplicadoPor            String?
+  fechaAplicacion        DateTime               @default(now())
+  empresa                empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "AplicacionPlantilla_empresaId_fkey")
+  plantillaconfiguracion PlantillaConfiguracion @relation(fields: [plantillaId], references: [id], onDelete: Cascade, map: "AplicacionPlantilla_plantillaId_fkey")
+
+  @@index([empresaId], map: "AplicacionPlantilla_empresaId_idx")
+  @@index([plantillaId], map: "AplicacionPlantilla_plantillaId_idx")
+  @@map("aplicacionplantilla")
+}
+
+model AuditoriaLog {
+  id                String              @id @default(cuid())
+  tabla             String
+  registroId        String
+  accion            auditorialog_accion
+  datosAnteriores   String?             @db.LongText
+  datosNuevos       String?             @db.LongText
+  cambiosRealizados String?             @db.LongText
+  usuarioId         String?
+  usuarioEmail      String?
+  usuarioRol        String?
+  empresaId         String?
+  direccionIP       String?
+  userAgent         String?
+  notas             String?             @db.Text
+  createdAt         DateTime            @default(now())
+  empresa           empresa?            @relation(fields: [empresaId], references: [id], map: "AuditoriaLog_empresaId_fkey")
+
+  @@index([createdAt], map: "AuditoriaLog_createdAt_idx")
+  @@index([empresaId], map: "AuditoriaLog_empresaId_idx")
+  @@index([tabla, registroId], map: "AuditoriaLog_tabla_registroId_idx")
+  @@index([usuarioId], map: "AuditoriaLog_usuarioId_idx")
+  @@map("auditorialog")
+}
+
+model bodega {
+  id               String             @id @default(cuid())
+  nombre           String
+  descripcion      String?
+  ubicacion        String?
+  activa           Boolean            @default(true)
+  empresaId        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime                @updatedAt
+  empresa          empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Bodega_empresaId_fkey")
+  movimientos      MovimientoBodega[]
+
+  @@index([empresaId], map: "Bodega_empresaId_idx")
+}
+
+model categoria {
+  id          String     @id @default(cuid())
+  nombre      String
+  descripcion String?
+  empresaId   String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime                @updatedAt
+  empresa     empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Categoria_empresaId_fkey")
+  productos   producto[]
+  servicios   servicio[]
+
+  @@index([empresaId], map: "Categoria_empresaId_idx")
+}
+
+model cita {
+  id           String        @id @default(cuid())
+  fechaHora    DateTime
+  duracion     Int
+  estado       cita_estado   @default(PROGRAMADA)
+  notas        String?       @db.Text
+  recordatorio Boolean       @default(true)
+  clienteId    String
+  servicioId   String
+  empleadoId   String?
+  empresaId    String
+  ventaId      String?       @unique(map: "Cita_ventaId_key")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime                @updatedAt
+  cliente      cliente       @relation(fields: [clienteId], references: [id], map: "Cita_clienteId_fkey")
+  usuario      usuario?      @relation(fields: [empleadoId], references: [id], map: "Cita_empleadoId_fkey")
+  empresa      empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Cita_empresaId_fkey")
+  servicio     servicio      @relation(fields: [servicioId], references: [id], map: "Cita_servicioId_fkey")
+  venta        venta?        @relation(fields: [ventaId], references: [id], map: "Cita_ventaId_fkey")
+  citamascota  CitaMascota[]
+
+  @@index([clienteId], map: "Cita_clienteId_idx")
+  @@index([empleadoId], map: "Cita_empleadoId_idx")
+  @@index([empresaId], map: "Cita_empresaId_idx")
+  @@index([fechaHora], map: "Cita_fechaHora_idx")
+  @@index([servicioId], map: "Cita_servicioId_idx")
+}
+
+model CitaMascota {
+  id             String    @id @default(cuid())
+  citaId         String
+  mascotaId      String
+  motivoConsulta String    @db.Text
+  diagnostico    String?   @db.Text
+  tratamiento    String?   @db.Text
+  proximaCita    DateTime?
+  createdAt      DateTime  @default(now())
+  cita           cita      @relation(fields: [citaId], references: [id], onDelete: Cascade, map: "CitaMascota_citaId_fkey")
+  mascota        mascota   @relation(fields: [mascotaId], references: [id], onDelete: Cascade, map: "CitaMascota_mascotaId_fkey")
+
+  @@unique([citaId, mascotaId], map: "CitaMascota_citaId_mascotaId_key")
+  @@index([citaId], map: "CitaMascota_citaId_idx")
+  @@index([mascotaId], map: "CitaMascota_mascotaId_idx")
+  @@map("citamascota")
+}
+
+model cliente {
+  id                String              @id @default(cuid())
+  nombre            String
+  email             String?
+  telefono          String?
+  direccion         String?
+  empresaId         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  cita              cita[]
+  empresa           empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Cliente_empresaId_fkey")
+  mascota           mascota[]
+  pedidorestaurante PedidoRestaurante[]
+  venta             venta[]
+  comandas          Comanda[]
+
+  @@index([empresaId], map: "Cliente_empresaId_idx")
+}
+
+model ConfiguracionEmpresa {
+  id                          String                           @id @default(cuid())
+  empresaId                   String                           @unique(map: "ConfiguracionEmpresa_empresaId_key")
+  tipoNegocio                 configuracionempresa_tipoNegocio
+  habilitarServicios          Boolean                          @default(false)
+  habilitarCitas              Boolean                          @default(false)
+  habilitarVariantes          Boolean                          @default(false)
+  habilitarRecetas            Boolean                          @default(false)
+  habilitarLotes              Boolean                          @default(false)
+  habilitarVencimientos       Boolean                          @default(false)
+  habilitarMascotas           Boolean                          @default(false)
+  habilitarInventarioAvanzado Boolean                          @default(false)
+  habilitarReportes           Boolean                          @default(false)
+  habilitarMultiUsuarios      Boolean                          @default(false)
+  configuracionPos            String?                          @db.LongText
+  configuracionFactura        String?                          @db.LongText
+  configuracionInventario     String?                          @db.LongText
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                @updatedAt
+  metaDiariaVentas            Float?
+  metaMensualVentas           Float?
+  metaSemanalVentas           Float?
+  empresa                     empresa                          @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "ConfiguracionEmpresa_empresaId_fkey")
+
+  @@map("configuracionempresa")
+}
+
+model EmpleadoServicio {
+  id              String   @id @default(cuid())
+  usuarioId       String
+  servicioId      String
+  activo          Boolean  @default(true)
+  fechaAsignacion DateTime @default(now())
+  servicio        servicio @relation(fields: [servicioId], references: [id], onDelete: Cascade, map: "EmpleadoServicio_servicioId_fkey")
+  usuario         usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, map: "EmpleadoServicio_usuarioId_fkey")
+
+  @@unique([usuarioId, servicioId], map: "EmpleadoServicio_usuarioId_servicioId_key")
+  @@index([servicioId], map: "EmpleadoServicio_servicioId_idx")
+  @@index([usuarioId], map: "EmpleadoServicio_usuarioId_idx")
+  @@map("empleadoservicio")
+}
+
+model empresa {
+  id                   String                @id @default(cuid())
+  nombre               String
+  email                String?               @unique
+  telefono             String?
+  direccion            String?
+  logo                 String?               @db.Text
+  tipoNegocio          empresa_tipoNegocio   @default(OTRO)
+  activa               Boolean               @default(true)
+  bodegaHabilitada     Boolean               @default(false)
+  fechaVencimiento     DateTime?
+  notaDesactivacion    String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  ciudad               String?
+  departamento         String?
+  imagenBanner         String?               @db.Text
+  logoSecundario       String?               @db.Text
+  nit                  String?               @unique(map: "Empresa_nit_key")
+  nombreComercial      String?
+  pais                 String?               @default("Colombia")
+  actividadesUsuario     ActividadUsuario[]
+  aplicacionesPlantilla  AplicacionPlantilla[]
+  auditoriaLogs          AuditoriaLog[]
+  bodegas                bodega[]
+  categorias             categoria[]
+  citas                  cita[]
+  clientes               cliente[]
+  configuracion          ConfiguracionEmpresa?
+  mascotas               mascota[]
+  mesasRestaurante       MesaRestaurante[]
+  metas                  MetaEmpresa[]
+  metricasUso            MetricaUso[]
+  pedidosRestaurante     PedidoRestaurante[]
+  productos              producto[]
+  proveedores            proveedor[]
+  servicios              servicio[]
+  suscripciones          suscripcion[]
+  terminales             terminal[]
+  unidadesMedida         UnidadMedida[]
+  usuarios               usuario[]
+  ventas                 venta[]
+  cajaTurnos             CajaTurno[]
+  categoriasGasto        CategoriaGasto[]
+  gastos                 Gasto[]
+  comandas               Comanda[]
+}
+
+model ItemVenta {
+  id               String             @id @default(cuid())
+  cantidad         Decimal            @db.Decimal(10, 3)
+  cantidadEntera   Int?
+  peso             Decimal?           @db.Decimal(10, 3)
+  medida           Decimal?           @db.Decimal(10, 3)
+  comisionPagada   Boolean            @default(false)
+  unidadMedida     String?
+  precio           Decimal            @db.Decimal(10, 2)
+  subtotal         Decimal            @db.Decimal(10, 2)
+  ventaId          String
+  productoId       String?
+  servicioId       String?
+  varianteId       String?
+  empleadoId       String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime                @updatedAt
+  producto         producto?          @relation(fields: [productoId], references: [id], map: "ItemVenta_productoId_fkey")
+  servicio         servicio?          @relation(fields: [servicioId], references: [id], map: "ItemVenta_servicioId_fkey")
+  variante         VarianteProducto?  @relation(fields: [varianteId], references: [id], map: "ItemVenta_varianteId_fkey")
+  venta            venta              @relation(fields: [ventaId], references: [id], onDelete: Cascade, map: "ItemVenta_ventaId_fkey")
+  empleado         usuario?           @relation("ItemVentaEmpleado", fields: [empleadoId], references: [id])
+  itemventamascota ItemVentaMascota[]
+
+  @@index([productoId], map: "ItemVenta_productoId_idx")
+  @@index([servicioId], map: "ItemVenta_servicioId_idx")
+  @@index([varianteId], map: "ItemVenta_varianteId_fkey")
+  @@index([ventaId], map: "ItemVenta_ventaId_idx")
+  @@index([empleadoId], map: "ItemVenta_empleadoId_idx")
+  @@map("itemventa")
+}
+
+model ItemVentaMascota {
+  id          String    @id @default(cuid())
+  itemVentaId String
+  mascotaId   String
+  diagnostico String?   @db.Text
+  tratamiento String?   @db.Text
+  proximaCita DateTime?
+  createdAt   DateTime  @default(now())
+  itemventa   ItemVenta @relation(fields: [itemVentaId], references: [id], onDelete: Cascade, map: "ItemVentaMascota_itemVentaId_fkey")
+  mascota     mascota   @relation(fields: [mascotaId], references: [id], onDelete: Cascade, map: "ItemVentaMascota_mascotaId_fkey")
+
+  @@unique([itemVentaId, mascotaId], map: "ItemVentaMascota_itemVentaId_mascotaId_key")
+  @@index([itemVentaId], map: "ItemVentaMascota_itemVentaId_idx")
+  @@index([mascotaId], map: "ItemVentaMascota_mascotaId_idx")
+  @@map("itemventamascota")
+}
+
+model mascota {
+  id               String             @id @default(cuid())
+  nombre           String
+  especie          String
+  raza             String?
+  edad             Int?
+  peso             Decimal?           @db.Decimal(5, 2)
+  sexo             String?
+  color            String?
+  microchip        String?            @unique(map: "Mascota_microchip_key")
+  historialMedico  String?            @db.Text
+  alergias         String?            @db.Text
+  medicamentos     String?            @db.Text
+  observaciones    String?            @db.Text
+  activo           Boolean            @default(true)
+  clienteId        String
+  empresaId        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime                @updatedAt
+  citas            CitaMascota[]
+  itemsVenta       ItemVentaMascota[]
+  cliente          cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade, map: "Mascota_clienteId_fkey")
+  empresa          empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Mascota_empresaId_fkey")
+
+  @@index([clienteId], map: "Mascota_clienteId_idx")
+  @@index([empresaId], map: "Mascota_empresaId_idx")
+}
+
+model MesaRestaurante {
+  id                    String                  @id @default(cuid())
+  nombre                String
+  capacidad             Int                     @default(4)
+  ubicacion             String?
+  activa                Boolean                 @default(true)
+  estado                mesarestaurante_estado  @default(LIBRE)
+  empresaId             String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  empresa               empresa                 @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "MesaRestaurante_empresaId_fkey")
+  pedidos               PedidoMesaRestaurante[]
+
+  @@unique([empresaId, nombre], map: "MesaRestaurante_empresaId_nombre_key")
+  @@index([empresaId], map: "MesaRestaurante_empresaId_idx")
+  @@index([estado], map: "MesaRestaurante_estado_idx")
+  @@map("mesarestaurante")
+}
+
+model MetricaUso {
+  id           String                  @id @default(cuid())
+  tipo         metricauso_tipo
+  entidad      String
+  entidadId    String
+  evento       String
+  datos        String?                 @db.LongText
+  valor        Int?
+  valorDecimal Decimal?                @db.Decimal(10, 2)
+  empresaId    String?
+  usuarioId    String?
+  tipoNegocio  metricauso_tipoNegocio?
+  createdAt    DateTime                @default(now()) @map("fecha")
+  fechaMes     String
+  fechaDia     String
+  empresa      empresa?                @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "MetricaUso_empresaId_fkey")
+
+  @@index([empresaId], map: "MetricaUso_empresaId_idx")
+  @@index([fechaDia], map: "MetricaUso_fechaDia_idx")
+  @@index([fechaMes], map: "MetricaUso_fechaMes_idx")
+  @@index([tipoNegocio], map: "MetricaUso_tipoNegocio_idx")
+  @@index([tipo, entidad], map: "MetricaUso_tipo_entidad_idx")
+  @@map("metricauso")
+}
+
+model MovimientoBodega {
+  id               String                @id @default(cuid())
+  tipo             movimientobodega_tipo
+  cantidad         Int
+  peso             Decimal?              @db.Decimal(10, 3)
+  motivo           String
+  varianteId       String?
+  observaciones    String?               @db.Text
+  productoId       String
+  bodegaId         String
+  usuarioId        String
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime                @updatedAt
+  bodega           bodega                @relation(fields: [bodegaId], references: [id], onDelete: Cascade, map: "MovimientoBodega_bodegaId_fkey")
+  producto         producto              @relation(fields: [productoId], references: [id], map: "MovimientoBodega_productoId_fkey")
+  usuario          usuario               @relation(fields: [usuarioId], references: [id], map: "MovimientoBodega_usuarioId_fkey")
+  varianteproducto VarianteProducto?     @relation(fields: [varianteId], references: [id], map: "MovimientoBodega_varianteId_fkey")
+
+  @@index([bodegaId], map: "MovimientoBodega_bodegaId_idx")
+  @@index([productoId], map: "MovimientoBodega_productoId_idx")
+  @@index([usuarioId], map: "MovimientoBodega_usuarioId_idx")
+  @@index([varianteId], map: "MovimientoBodega_varianteId_fkey")
+  @@map("movimientobodega")
+}
+
+model PagoVenta {
+  id            String               @id @default(cuid())
+  ventaId       String
+  metodoPago    pagoventa_metodoPago
+  monto         Decimal              @db.Decimal(10, 2)
+  referencia    String?
+  notas         String?
+  createdAt     DateTime             @default(now()) @map("fechaCreacion")
+  venta         venta                @relation(fields: [ventaId], references: [id], onDelete: Cascade, map: "PagoVenta_ventaId_fkey")
+
+  @@index([ventaId], map: "PagoVenta_ventaId_idx")
+  @@map("pagoventa")
+}
+
+model PagoVentaFiada {
+  id         String   @id @default(cuid())
+  ventaId    String
+  monto      Decimal  @db.Decimal(10, 2)
+  metodoPago String
+  referencia String?
+  notas      String?  @db.Text
+  usuarioId  String?
+  fechaPago  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime                @updatedAt
+  venta      venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade, map: "PagoVentaFiada_ventaId_fkey")
+
+  @@index([fechaPago], map: "PagoVentaFiada_fechaPago_idx")
+  @@index([ventaId], map: "PagoVentaFiada_ventaId_idx")
+  @@map("pagoventafiada")
+}
+
+model PedidoMesaRestaurante {
+  id                String            @id @default(cuid())
+  pedidoId          String
+  mesaId            String
+  esPrincipal       Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  mesa              MesaRestaurante   @relation(fields: [mesaId], references: [id], onDelete: Cascade, map: "PedidoMesaRestaurante_mesaId_fkey")
+  pedido            PedidoRestaurante @relation(fields: [pedidoId], references: [id], onDelete: Cascade, map: "PedidoMesaRestaurante_pedidoId_fkey")
+
+  @@unique([pedidoId, mesaId], map: "PedidoMesaRestaurante_pedidoId_mesaId_key")
+  @@index([mesaId], map: "PedidoMesaRestaurante_mesaId_idx")
+  @@map("pedidomesarestaurante")
+}
+
+model PedidoRestaurante {
+  id                    String                   @id @default(cuid())
+  empresaId             String
+  usuarioId             String
+  clienteId             String?
+  ventaId               String?                  @unique(map: "PedidoRestaurante_ventaId_key")
+  estado                pedidorestaurante_estado @default(ABIERTO)
+  nombreCuenta          String?
+  notas                 String?                  @db.Text
+  comensales            Int                      @default(1)
+  subtotal              Decimal                  @default(0.00) @db.Decimal(10, 2)
+  impuesto              Decimal                  @default(0.00) @db.Decimal(10, 2)
+  total                 Decimal                  @default(0.00) @db.Decimal(10, 2)
+  fechaFacturacion      DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                @updatedAt
+  mesas                 PedidoMesaRestaurante[]
+  cliente               cliente?                 @relation(fields: [clienteId], references: [id], map: "PedidoRestaurante_clienteId_fkey")
+  empresa               empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "PedidoRestaurante_empresaId_fkey")
+  usuario               usuario                  @relation(fields: [usuarioId], references: [id], map: "PedidoRestaurante_usuarioId_fkey")
+  venta                 venta?                   @relation(fields: [ventaId], references: [id], map: "PedidoRestaurante_ventaId_fkey")
+  items                 PedidoRestauranteItem[]
+
+  @@index([clienteId], map: "PedidoRestaurante_clienteId_idx")
+  @@index([empresaId], map: "PedidoRestaurante_empresaId_idx")
+  @@index([estado], map: "PedidoRestaurante_estado_idx")
+  @@index([usuarioId], map: "PedidoRestaurante_usuarioId_idx")
+  @@map("pedidorestaurante")
+}
+
+model PedidoRestauranteItem {
+  id                String                                  @id @default(cuid())
+  pedidoId          String
+  productoId        String
+  nombreProducto    String
+  cantidad          Int                                     @default(1)
+  precioUnitario    Decimal                                 @db.Decimal(10, 2)
+  subtotal          Decimal                                 @db.Decimal(10, 2)
+  notas             String?                                 @db.Text
+  esCortesia        Boolean                                 @default(false)  // Cortesía: precio $0 pero descuenta stock
+  createdAt         DateTime                                @default(now())
+  updatedAt         DateTime                @updatedAt
+  estacion          pedidorestauranteitem_estacion          @default(COCINA)
+  estadoPreparacion pedidorestauranteitem_estadoPreparacion @default(PENDIENTE)
+  fechaEntrega      DateTime?
+  fechaListo        DateTime?
+  fechaSolicitud    DateTime                                @default(now())
+  pedido            PedidoRestaurante                       @relation(fields: [pedidoId], references: [id], onDelete: Cascade, map: "PedidoRestauranteItem_pedidoId_fkey")
+  producto          producto                                @relation(fields: [productoId], references: [id], map: "PedidoRestauranteItem_productoId_fkey")
+
+  @@index([estacion, estadoPreparacion], map: "PedidoRestauranteItem_estacion_estadoPreparacion_idx")
+  @@index([pedidoId], map: "PedidoRestauranteItem_pedidoId_idx")
+  @@index([productoId], map: "PedidoRestauranteItem_productoId_idx")
+  @@map("pedidorestauranteitem")
+}
+
+model plan {
+  id                    String        @id @default(cuid())
+  nombre                String
+  descripcion           String?       @db.Text
+  precio                Decimal       @db.Decimal(10, 2)
+  meses                 Int
+  activo                Boolean       @default(true)
+  destacado             Boolean       @default(false)
+  descuento             Int           @default(0)
+  caracteristicas       String        @db.LongText
+  limitesUsuarios       Int?
+  limitesProductos      Int?
+  limitesTerminales     Int?
+  habilitarReportes     Boolean       @default(false)
+  habilitarMultiUsuario Boolean       @default(false)
+  habilitarInventario   Boolean       @default(true)
+  habilitarServicios    Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime                @updatedAt
+  suscripciones         suscripcion[]
+}
+
+model PlantillaConfiguracion {
+  id                  String                             @id @default(cuid())
+  nombre              String
+  descripcion         String?                            @db.Text
+  tipoNegocio         plantillaconfiguracion_tipoNegocio
+  esDefault           Boolean                            @default(false)
+  activa              Boolean                            @default(true)
+  configuracion       String                             @db.LongText
+  creadoPor           String?
+  vecesAplicada       Int                                @default(0)
+  createdAt           DateTime                           @default(now())
+  updatedAt           DateTime                @updatedAt
+  aplicaciones        AplicacionPlantilla[]
+
+  @@map("plantillaconfiguracion")
+}
+
+model producto {
+  id                    String                  @id @default(cuid())
+  nombre                String
+  descripcion           String?                 @db.Text
+  precio                Decimal?                @db.Decimal(10, 2)
+  precioCosto           Decimal?                @db.Decimal(10, 2)
+  tipoVenta             producto_tipoVenta      @default(UNIDAD)
+  precioPorKilo         Decimal?                @db.Decimal(10, 2)
+  precioPorGramo        Decimal?                @db.Decimal(10, 4)
+  precioPorMetro        Decimal?                @db.Decimal(10, 2)
+  precioPorLitro        Decimal?                @db.Decimal(10, 2)
+  unidadBase            String?
+  unidadVenta           String?
+  factorConversion      Decimal?                @db.Decimal(10, 4)
+  codigoBarras          String?                 @unique(map: "Producto_codigoBarras_key")
+  sku                   String?
+  imagen                String?                 @db.Text
+  enStock               Decimal                 @default(0.000) @db.Decimal(10, 3)
+  stockMinimo           Decimal                 @default(0.000) @db.Decimal(10, 3)
+  requiereBalanza       Boolean                 @default(false)
+  pesoAproximado        Decimal?                @db.Decimal(10, 3)
+  activo                Boolean                 @default(true)
+  empresaId             String
+  categoriaId           String?
+  proveedorId           String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  imagenCodigoBarras    String?                 @db.Text
+  esExentoIva           Boolean                 @default(false)
+  incluyeIva            Boolean                 @default(true)
+  tarifaIva             Decimal                 @default(19.00) @db.Decimal(5, 2)
+  precioSugerido        Decimal?                @db.Decimal(10, 2)
+  fechasVencimiento     String?                 @db.LongText
+  manejaVencimiento     Boolean                 @default(false)
+
+  // ─── Productos Compuestos (Combos) ─────────────────
+  esCombo               Boolean                 @default(false)
+  precioEspecial        Decimal?                @db.Decimal(10, 2)   // Precio alternativo (ej: fin de semana)
+  diasPrecioEspecial    String?                 // JSON: ["VIERNES","SABADO","DOMINGO"]
+
+  // ─── Relaciones existentes ─────────────────────────
+  itemsVenta            ItemVenta[]
+  movimientobodega      MovimientoBodega[]
+  movimientosInventario MovimientoInventario[]
+  pedidorestauranteitem PedidoRestauranteItem[]
+  categoria             categoria?              @relation(fields: [categoriaId], references: [id], map: "Producto_categoriaId_fkey")
+  empresa               empresa                 @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Producto_empresaId_fkey")
+  proveedor             proveedor?              @relation(fields: [proveedorId], references: [id], map: "Producto_proveedorId_fkey")
+  varianteproducto      VarianteProducto[]
+  consumosInternos      ConsumoInventarioServicio[] // Consumos de inventario internos ligados a servicios de peluquería
+
+  // ─── Relaciones de Combos ──────────────────────────
+  itemsComanda          ComandaItem[]
+  componentes           ComponenteProducto[]    // Componentes de este combo
+  usadoEnCombos         ComponenteProducto[]    @relation("ComponenteRef") // Combos que usan este producto
+
+  @@index([categoriaId], map: "Producto_categoriaId_idx")
+  @@index([empresaId], map: "Producto_empresaId_idx")
+  @@index([proveedorId], map: "Producto_proveedorId_idx")
+}
+
+model ComponenteProducto {
+  id              String    @id @default(cuid())
+  comboId         String
+  componenteId    String
+  cantidad        Int       @default(1)
+  esCortesia      Boolean   @default(false)  // Si es cortesía (no se cobra, sí descuenta stock)
+  createdAt       DateTime  @default(now())
+
+  combo           producto  @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  componente      producto  @relation("ComponenteRef", fields: [componenteId], references: [id], onDelete: Cascade)
+
+  @@unique([comboId, componenteId], map: "ComponenteProducto_comboId_componenteId_key")
+  @@index([comboId], map: "ComponenteProducto_comboId_idx")
+  @@index([componenteId], map: "ComponenteProducto_componenteId_idx")
+  @@map("componenteproducto")
+}
+
+model proveedor {
+  id        String     @id @default(cuid())
+  nombre    String
+  empresa   String?
+  email     String?
+  telefono  String?
+  direccion String?
+  contacto  String?
+  notas     String?    @db.Text
+  activo    Boolean    @default(true)
+  empresaId String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime                @updatedAt
+  productos producto[]
+  empresaRel empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Proveedor_empresaId_fkey")
+
+  @@index([empresaId], map: "Proveedor_empresaId_idx")
+}
+
+model RecordatorioVentaFiada {
+  id                String                      @id @default(cuid())
+  ventaId           String
+  tipo              recordatorioventafiada_tipo
+  mensaje           String                      @db.Text
+  fechaRecordatorio DateTime
+  enviado           Boolean                     @default(false)
+  fechaEnvio        DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                @updatedAt
+  venta             venta                       @relation(fields: [ventaId], references: [id], onDelete: Cascade, map: "RecordatorioVentaFiada_ventaId_fkey")
+
+  @@index([enviado], map: "RecordatorioVentaFiada_enviado_idx")
+  @@index([fechaRecordatorio], map: "RecordatorioVentaFiada_fechaRecordatorio_idx")
+  @@index([ventaId], map: "RecordatorioVentaFiada_ventaId_idx")
+  @@map("recordatorioventafiada")
+}
+
+model servicio {
+  id                  String             @id @default(cuid())
+  nombre              String
+  descripcion         String?            @db.Text
+  precio              Decimal            @db.Decimal(10, 2)
+  duracion            Int
+  color               String?
+  activo              Boolean            @default(true)
+  requiereEmpleado    Boolean            @default(true)
+  empresaId           String
+  categoriaId         String?
+  porcentajeNegocio   Decimal?           @db.Decimal(5, 2) // % del precio que queda para el negocio
+  porcentajeEmpleado  Decimal?           @db.Decimal(5, 2) // % del precio que gana el empleado
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime                @updatedAt
+  cita                cita[]
+  empleadoservicio    EmpleadoServicio[]
+  itemsVenta          ItemVenta[]
+  itemsComanda        ComandaItem[]
+  categoria           categoria?         @relation(fields: [categoriaId], references: [id], map: "Servicio_categoriaId_fkey")
+  empresa             empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Servicio_empresaId_fkey")
+
+  @@index([categoriaId], map: "Servicio_categoriaId_idx")
+  @@index([empresaId], map: "Servicio_empresaId_idx")
+}
+
+model suscripcion {
+  id                   String             @id @default(cuid())
+  empresaId            String
+  planId               String
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  estado               suscripcion_estado @default(ACTIVA)
+  precioTotal          Decimal            @db.Decimal(10, 2)
+  descuentoAplicado    Int                @default(0)
+  metodoPago           String?
+  transaccionId        String?
+  renovacionAutomatica Boolean            @default(false)
+  notasAdmin           String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime                @updatedAt
+  empresa              empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Suscripcion_empresaId_fkey")
+  plan                 plan               @relation(fields: [planId], references: [id], map: "Suscripcion_planId_fkey")
+
+  @@index([empresaId], map: "Suscripcion_empresaId_idx")
+  @@index([estado], map: "Suscripcion_estado_idx")
+  @@index([fechaFin], map: "Suscripcion_fechaFin_idx")
+  @@index([planId], map: "Suscripcion_planId_idx")
+}
+
+model terminal {
+  id                  String            @id @default(cuid())
+  nombre              String
+  descripcion         String?
+  ubicacion           String?
+  numeracion          String?
+  activo              Boolean           @default(true)
+  esTerminalPrincipal Boolean           @default(false)
+  empresaId           String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime                @updatedAt
+  empresa             empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Terminal_empresaId_fkey")
+  usuariosAsignados   UsuarioTerminal[]
+  ventas              venta[]
+
+  @@index([empresaId], map: "Terminal_empresaId_idx")
+}
+
+model UnidadMedida {
+  id         String            @id @default(cuid())
+  nombre     String
+  simbolo    String
+  tipo       unidadmedida_tipo
+  factorBase Decimal           @db.Decimal(15, 6)
+  unidadBase String
+  activa     Boolean           @default(true)
+  empresaId  String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime                @updatedAt
+  empresa    empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "UnidadMedida_empresaId_fkey")
+
+  @@index([empresaId], map: "UnidadMedida_empresaId_idx")
+  @@index([tipo], map: "UnidadMedida_tipo_idx")
+  @@map("unidadmedida")
+}
+
+model usuario {
+  id                      String                 @id @default(cuid())
+  nombre                  String
+  email                   String                 @unique(map: "Usuario_email_key")
+  telefono                String?
+  contrasena              String
+  rol                     usuario_rol            @default(EMPLEADO)
+  imagen                  String?
+  empresaId               String
+  activo                  Boolean                @default(true)
+  emailVerificado         DateTime?
+  configuracionCompletada Boolean                @default(false)
+  porcentajeComision      Decimal?               @db.Decimal(5, 2)
+  esEmpleadoOperativo     Boolean                @default(false) // Empleado sin acceso al sistema, solo para asignación de servicios y comisiones
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  actividadUsuario        ActividadUsuario[]
+  cita                    cita[]
+  empleadoservicio        EmpleadoServicio[]
+  movimientobodega        MovimientoBodega[]
+  movimientosInventario   MovimientoInventario[]
+  pedidorestaurante       PedidoRestaurante[]
+  empresa                 empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Usuario_empresaId_fkey")
+  usuarioterminal         UsuarioTerminal[]
+  venta                   venta[]
+  cajaTurnos              CajaTurno[]
+  gastos                  Gasto[]
+  itemsVentaRealizados    ItemVenta[]            @relation("ItemVentaEmpleado")
+  comandasAbiertas        Comanda[]              @relation("ComandaCajero")
+  itemsComanda            ComandaItem[]          @relation("ComandaItemEmpleado")
+
+  @@index([empresaId], map: "Usuario_empresaId_idx")
+}
+
+model UsuarioTerminal {
+  id              String   @id @default(cuid())
+  usuarioId       String
+  terminalId      String
+  activo          Boolean  @default(true)
+  fechaAsignacion DateTime @default(now())
+  terminal        terminal @relation(fields: [terminalId], references: [id], onDelete: Cascade, map: "UsuarioTerminal_terminalId_fkey")
+  usuario         usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, map: "UsuarioTerminal_usuarioId_fkey")
+
+  @@unique([usuarioId, terminalId], map: "UsuarioTerminal_usuarioId_terminalId_key")
+  @@index([terminalId], map: "UsuarioTerminal_terminalId_idx")
+  @@index([usuarioId], map: "UsuarioTerminal_usuarioId_idx")
+  @@map("usuarioterminal")
+}
+
+model VarianteProducto {
+  id               String             @id @default(cuid())
+  productoId       String
+  nombre           String
+  sku              String?
+  codigoBarras     String?            @unique(map: "VarianteProducto_codigoBarras_key")
+  precio           Decimal?           @db.Decimal(10, 2)
+  precioPorKilo    Decimal?           @db.Decimal(10, 2)
+  precioPorGramo   Decimal?           @db.Decimal(10, 4)
+  precioPorMetro   Decimal?           @db.Decimal(10, 2)
+  precioPorLitro   Decimal?           @db.Decimal(10, 2)
+  enStock          Int                @default(0)
+  stockMinimo      Int?
+  activo           Boolean            @default(true)
+  talla            String?
+  color            String?
+  material         String?
+  peso             Decimal?           @db.Decimal(10, 3)
+  dimensiones      String?
+  imagen           String?            @db.Text
+  atributosExtra   String?            @db.LongText
+  esExentoIva      Boolean            @default(false)
+  tarifaIva        Decimal?           @db.Decimal(5, 2)
+  incluyeIva       Boolean            @default(false)
+  fechaVencimiento DateTime?
+  lote             String?
+  fechaProduccion  DateTime?
+  fechaEliminacion DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  itemsVenta        ItemVenta[]
+  movimientobodega MovimientoBodega[]
+  producto         producto           @relation(fields: [productoId], references: [id], onDelete: Cascade, map: "VarianteProducto_productoId_fkey")
+
+  @@index([productoId], map: "VarianteProducto_productoId_idx")
+  @@map("varianteproducto")
+}
+model venta {
+  id                     String                   @id @default(cuid())
+  total                  Decimal                  @db.Decimal(10, 2)
+  descuento              Decimal                  @default(0.00) @db.Decimal(10, 2)
+  subtotal               Decimal                  @db.Decimal(10, 2)
+  metodoPago             venta_metodoPago
+  estado                 venta_estado             @default(COMPLETADA)
+  empresaId              String
+  usuarioId              String
+  clienteId              String?
+  terminalId             String?
+  notas                  String?
+  reciboImpreso          Boolean                  @default(false)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                @updatedAt
+  impuesto               Decimal                  @default(0.00) @db.Decimal(10, 2)
+  diasCredito            Int?
+  esVentaFiada           Boolean                  @default(false)
+  estadoPago             venta_estadoPago         @default(PENDIENTE)
+  fechaUltimoPago        DateTime?
+  fechaVencimiento       DateTime?
+  montoPagado            Decimal                  @default(0.00) @db.Decimal(10, 2)
+  saldoPendiente         Decimal?                 @db.Decimal(10, 2)
+  cita                   cita?
+  items                  ItemVenta[]
+  pagos                  PagoVenta[]
+  pagosFiados            PagoVentaFiada[]
+  pedidoRestaurante      PedidoRestaurante?
+  recordatoriosFiados    RecordatorioVentaFiada[]
+  comanda                Comanda?                 // Comanda de peluquería que originó esta venta
+  cliente                cliente?                 @relation(fields: [clienteId], references: [id], map: "Venta_clienteId_fkey")
+  empresa                empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade, map: "Venta_empresaId_fkey")
+  terminal               terminal?                @relation(fields: [terminalId], references: [id], map: "Venta_terminalId_fkey")
+  usuario                usuario                  @relation(fields: [usuarioId], references: [id], map: "Venta_usuarioId_fkey")
+
+  @@index([clienteId], map: "Venta_clienteId_idx")
+  @@index([empresaId], map: "Venta_empresaId_idx")
+  @@index([terminalId], map: "Venta_terminalId_idx")
+  @@index([usuarioId], map: "Venta_usuarioId_idx")
+}
+
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
+  AJUSTE
+  TRANSFERENCIA
+}
+
+enum TipoMeta {
+  VENTAS   @map("VENTAS")
+  INGRESOS @map("INGRESOS")
+
+  @@map("TipoMeta")
+}
+
+enum metricauso_tipo {
+  EMPRESA
+  USUARIO
+  VENTA
+  PRODUCTO
+  CONFIGURACION
+  ACCESO
+}
+
+enum movimientobodega_tipo {
+  ENTRADA
+  SALIDA
+  AJUSTE
+  TRANSFERENCIA
+}
+
+enum configuracionempresa_tipoNegocio {
+  TIENDA_COMIDA
+  TIENDA_BARRIO
+  FERRETERIA
+  PELUQUERIA
+  SALON_BELLEZA
+  ROPA
+  RESTAURANTE
+  BAR
+  CAFETERIA
+  FARMACIA
+  LIBRERIA
+  ELECTRONICA
+  VETERINARIA
+  SUPERMERCADO
+  SERVICIOS
+  SALUD
+  PROFESIONAL
+  MIXTO
+  PERSONALIZADO
+  OTRO
+}
+
+enum pagoventa_metodoPago {
+  EFECTIVO
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+  TRANSFERENCIA
+  FIADO
+  MIXTO
+  OTRO
+}
+
+enum recordatorioventafiada_tipo {
+  PROXIMO_VENCIMIENTO
+  DIA_VENCIMIENTO
+  VENCIDO
+  PAGO_PARCIAL
+}
+
+enum auditorialog_accion {
+  CREAR
+  ACTUALIZAR
+  ELIMINAR
+  ACTIVAR
+  DESACTIVAR
+  EJECUTAR
+  CAMBIO_TIPO_NEGOCIO
+  APLICAR_PLANTILLA
+}
+
+enum cita_estado {
+  PROGRAMADA
+  CONFIRMADA
+  EN_PROCESO
+  COMPLETADA
+  FACTURADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+enum plantillaconfiguracion_tipoNegocio {
+  TIENDA_COMIDA
+  TIENDA_BARRIO
+  FERRETERIA
+  PELUQUERIA
+  SALON_BELLEZA
+  ROPA
+  RESTAURANTE
+  BAR
+  CAFETERIA
+  FARMACIA
+  LIBRERIA
+  ELECTRONICA
+  VETERINARIA
+  SUPERMERCADO
+  SERVICIOS
+  SALUD
+  PROFESIONAL
+  MIXTO
+  PERSONALIZADO
+  OTRO
+}
+
+enum unidadmedida_tipo {
+  PESO
+  VOLUMEN
+  LONGITUD
+  UNIDAD
+}
+
+enum venta_metodoPago {
+  EFECTIVO
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+  TRANSFERENCIA
+  FIADO
+  MIXTO
+  OTRO
+}
+
+enum mesarestaurante_estado {
+  LIBRE
+  OCUPADA
+  RESERVADA
+  LIMPIEZA
+  INACTIVA
+}
+
+enum pedidorestaurante_estado {
+  ABIERTO
+  FACTURADO
+  CANCELADO
+}
+
+enum producto_tipoVenta {
+  UNIDAD
+  PESO
+  METRO
+  LITRO
+  SERVICIO
+  TIEMPO
+  PRECIO_LIBRE
+}
+
+enum suscripcion_estado {
+  ACTIVA
+  EXPIRADA
+  CANCELADA
+  PAUSADA
+  PENDIENTE_PAGO
+}
+
+enum usuario_rol {
+  SUPERADMIN
+  ADMIN
+  ADMINISTRADOR
+  GERENTE
+  EMPLEADO
+}
+
+enum venta_estado {
+  PENDIENTE
+  COMPLETADA
+  CANCELADA
+  REEMBOLSADA
+}
+
+enum empresa_tipoNegocio {
+  TIENDA_COMIDA
+  TIENDA_BARRIO
+  FERRETERIA
+  PELUQUERIA
+  SALON_BELLEZA
+  ROPA
+  RESTAURANTE
+  BAR
+  CAFETERIA
+  FARMACIA
+  LIBRERIA
+  ELECTRONICA
+  VETERINARIA
+  SUPERMERCADO
+  SERVICIOS
+  SALUD
+  PROFESIONAL
+  MIXTO
+  PERSONALIZADO
+  OTRO
+}
+
+enum metricauso_tipoNegocio {
+  TIENDA_COMIDA
+  TIENDA_BARRIO
+  FERRETERIA
+  PELUQUERIA
+  SALON_BELLEZA
+  ROPA
+  RESTAURANTE
+  BAR
+  CAFETERIA
+  FARMACIA
+  LIBRERIA
+  ELECTRONICA
+  VETERINARIA
+  SUPERMERCADO
+  SERVICIOS
+  SALUD
+  PROFESIONAL
+  MIXTO
+  PERSONALIZADO
+  OTRO
+}
+
+enum pedidorestauranteitem_estacion {
+  COCINA
+  BARRA
+  GENERAL
+}
+
+enum pedidorestauranteitem_estadoPreparacion {
+  PENDIENTE
+  EN_PREPARACION
+  LISTO
+  ENTREGADO
+}
+
+enum venta_estadoPago {
+  PENDIENTE
+  PAGO_PARCIAL
+  PAGADO
+  VENCIDO
+}
+
+model CajaTurno {
+  id        String    @id @default(cuid())
+  empresaId String
+  usuarioId String
+  abiertaEn          DateTime  @default(now())
+  cerradaEn          DateTime?
+  montoInicial       Decimal   @default(0.00) @db.Decimal(10, 2)
+  montoFinalEsperado Decimal?  @db.Decimal(10, 2)
+  montoFinalReal     Decimal?  @db.Decimal(10, 2)
+  diferencia         Decimal?  @db.Decimal(10, 2)
+  notas              String?   @db.Text
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  empresa empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario usuario @relation(fields: [usuarioId], references: [id])
+  gastos  Gasto[]
+
+  @@index([empresaId, cerradaEn])
+  @@map("cajaturno")
+}
+
+model CategoriaGasto {
+  id        String   @id @default(cuid())
+  nombre    String
+  empresaId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gastos    Gasto[]
+
+  empresa empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("categoriagasto")
+}
+
+model Gasto {
+  id               String         @id @default(cuid())
+  concepto         String
+  monto            Decimal        @db.Decimal(10, 2)
+  fecha            DateTime       @default(now())
+  metodoPago       String?
+  categoriaId      String?
+  cajaTurnoId      String?
+  usuarioId        String
+  empresaId        String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  categoria CategoriaGasto? @relation(fields: [categoriaId], references: [id])
+  cajaTurno CajaTurno?     @relation(fields: [cajaTurnoId], references: [id])
+  usuario   usuario        @relation(fields: [usuarioId], references: [id])
+  empresa   empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, fecha])
+  @@index([cajaTurnoId])
+  @@map("gasto")
+}
+
+// ─── Módulo Peluquería / Salón de Belleza ──────────────────────────────────
+
+model Comanda {
+  id        String        @id @default(cuid())
+  empresaId String
+  clienteId String?
+  usuarioId String        // Cajero que abrió la comanda
+  estado    ComandaEstado @default(ABIERTA)
+  notas     String?       @db.Text
+  total     Decimal       @default(0.00) @db.Decimal(10, 2)
+  ventaId   String?       @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  empresa empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente cliente?      @relation(fields: [clienteId], references: [id])
+  usuario usuario       @relation("ComandaCajero", fields: [usuarioId], references: [id])
+  items   ComandaItem[]
+  venta   venta?        @relation(fields: [ventaId], references: [id])
+
+  @@index([empresaId, estado])
+  @@index([clienteId])
+  @@index([usuarioId])
+  @@map("comanda")
+}
+
+model ComandaItem {
+  id         String   @id @default(cuid())
+  comandaId  String
+  servicioId String?
+  productoId String?
+  empleadoId String?  // Empleado que realizó el servicio (si es servicio)
+  precio     Decimal  @db.Decimal(10, 2)
+  notas      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  comanda          Comanda                      @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  servicio         servicio?                    @relation(fields: [servicioId], references: [id])
+  producto         producto?                    @relation(fields: [productoId], references: [id])
+  empleado         usuario?                     @relation("ComandaItemEmpleado", fields: [empleadoId], references: [id])
+  consumosInternos ConsumoInventarioServicio[]
+
+  @@index([comandaId])
+  @@index([servicioId])
+  @@index([empleadoId])
+  @@map("comandaitem")
+}
+
+model ConsumoInventarioServicio {
+  id            String   @id @default(cuid())
+  comandaItemId String
+  productoId    String
+  cantidad      Decimal  @db.Decimal(10, 3)
+  notas         String?
+  createdAt     DateTime @default(now())
+
+  comandaItem ComandaItem @relation(fields: [comandaItemId], references: [id], onDelete: Cascade)
+  producto    producto    @relation(fields: [productoId], references: [id])
+
+  @@index([comandaItemId])
+  @@index([productoId])
+  @@map("consumoinventarioservicio")
+}
+
+enum ComandaEstado {
+  ABIERTA
+  CERRADA
+  CANCELADA
+}

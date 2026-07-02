@@ -1,0 +1,136 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env*.local
+
+# Archivos de backup de env
+.env.backup
+.env.*.backup
+
+
+*.db
+*.sqlite
+*.sqlite3
+/prisma/*.db
+/prisma/*.db-journal
+
+# Migraciones temporales
+/prisma/migrations/*_tmp
+
+
+/public/uploads/*
+/public/logos/*
+/uploads/*
+!/public/uploads/.gitkeep
+!/public/logos/.gitkeep
+
+# ========================================
+# 🔧 HERRAMIENTAS DE DESARROLLO
+# ========================================
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ========================================
+# 📊 LOGS Y REPORTES
+# ========================================
+logs/
+*.log
+report.*.json
+
+# ========================================
+# 🧪 TESTING
+# ========================================
+# Coverage reports
+coverage/
+.nyc_output/
+*.lcov
+
+# ========================================
+# 📦 BUILD Y CACHE
+# ========================================
+.cache/
+.parcel-cache/
+.turbo/
+dist/
+
+# ========================================
+# 🔑 CERTIFICADOS Y KEYS
+# ========================================
+*.key
+*.cert
+*.pem
+*.p12
+*.pfx
+
+# ========================================
+# 🐳 DOCKER (si lo usas)
+# ========================================
+docker-compose.override.yml
+.dockerignore
+
+# ========================================
+# 🎨 SISTEMA OPERATIVO
+# ========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
