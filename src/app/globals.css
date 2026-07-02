@@ -1,0 +1,621 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ══════════════════════════════════════════════════════
+       SISTEMA DE DISEÑO: SLATE PROFESSIONAL
+       Filosofía: Sofisticación Tech, Contraste de Acción,
+       Profundidad por Tonalidad. SIN gradientes.
+       MODO CLARO — Light Tech
+    ══════════════════════════════════════════════════════ */
+
+    /* Nivel 0: superficie base */
+    --background: 210 33% 98%;        /* #f8fafc — Azul Pizarra muy claro */
+    --foreground: 213 57% 11%;        /* #0f172a — Azul Pizarra profundo */
+
+    /* Nivel 1: contenedores y tarjetas */
+    --card: 0 0% 100%;                /* #ffffff — Blanco puro */
+    --card-foreground: 213 57% 11%;   /* #0f172a */
+
+    /* Popovers y dropdowns */
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 57% 11%;
+
+    /* Primary: Negro Profundo Tech — solo CTAs principales */
+    --primary: 213 81% 5%;            /* #020617 — Negro Azul Marino Tech */
+    --primary-foreground: 210 33% 98%; /* #f8fafc */
+
+    /* Secondary: alias de muted */
+    --secondary: 213 27% 94%;         /* #f1f5f9 */
+    --secondary-foreground: 213 57% 11%;
+
+    /* Muted: fondos secundarios */
+    --muted: 213 27% 94%;             /* #f1f5f9 */
+    --muted-foreground: 213 12% 36%;  /* #475569 — texto de apoyo */
+
+    /* Accent: hover suave */
+    --accent: 213 27% 94%;
+    --accent-foreground: 213 57% 11%;
+
+    /* Estados — sólidos, sin gradientes */
+    --destructive: 347 77% 50%;       /* #e11d48 — Rose Moderno */
+    --destructive-foreground: 0 0% 98%;
+
+    /* Bordes e inputs */
+    --border: 213 31% 89%;            /* separadores sutiles */
+    --input: 213 31% 89%;
+    --ring: 213 57% 11%;
+
+    --radius: 0.5rem;
+
+    /* Charts — paleta Slate Professional */
+    --chart-1: 163 76% 30%;           /* #10b981 verde */
+    --chart-2: 213 81% 5%;            /* #020617 primario */
+    --chart-3: 38 92% 50%;            /* #f59e0b ámbar */
+    --chart-4: 347 77% 50%;           /* #e11d48 rose */
+    --chart-5: 213 57% 11%;           /* #0f172a pizarra */
+
+    /* ── Colores de estado (referencia directa) ── */
+    --success: 160 84% 39%;           /* #10b981 */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;            /* #f59e0b */
+    --warning-foreground: 0 0% 100%;
+    --error: 347 77% 50%;             /* #e11d48 */
+    --error-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    /* ══════════════════════════════════════════════════════
+       MODO OSCURO — Graphite Professional
+       Filosofía: Neutral, limpio, sin gradientes.
+       Espejo del light mode pero en tonos oscuros.
+    ══════════════════════════════════════════════════════ */
+
+    /* Nivel 0: Fondo base — gris carbón neutro */
+    --background: 220 13% 9%;         /* #141518 — gris carbón profundo */
+    --foreground: 210 17% 92%;        /* #e8eaed — blanco suave, no crudo */
+
+    /* Nivel 1: Tarjetas — un paso más claro que el fondo */
+    --card: 220 13% 13%;              /* #1e2025 — gris carbón elevado */
+    --card-foreground: 210 17% 92%;   /* #e8eaed */
+
+    /* Popovers */
+    --popover: 220 13% 13%;
+    --popover-foreground: 210 17% 92%;
+
+    /* Primary: blanco claro para CTAs — igual que light mode al revés */
+    --primary: 210 17% 92%;           /* #e8eaed — texto/botón principal */
+    --primary-foreground: 220 13% 9%; /* fondo oscuro dentro del botón */
+
+    /* Secondary */
+    --secondary: 220 10% 18%;         /* #282b30 */
+    --secondary-foreground: 210 17% 92%;
+
+    /* Muted: fondos secundarios */
+    --muted: 220 10% 18%;             /* #282b30 */
+    --muted-foreground: 215 12% 55%;  /* #808a96 — texto de apoyo */
+
+    /* Accent */
+    --accent: 220 10% 22%;
+    --accent-foreground: 210 17% 92%;
+
+    /* Destructivo */
+    --destructive: 347 77% 50%;       /* #e11d48 */
+    --destructive-foreground: 0 0% 98%;
+
+    /* Bordes — separadores muy sutiles */
+    --border: 220 10% 22%;            /* #32363c */
+    --input: 220 10% 18%;
+    --ring: 210 17% 92%;
+
+    /* Charts */
+    --chart-1: 160 60% 45%;           /* verde esmeralda suave */
+    --chart-2: 210 17% 80%;
+    --chart-3: 38 85% 55%;            /* ámbar */
+    --chart-4: 347 70% 55%;           /* rose */
+    --chart-5: 215 15% 60%;
+
+    /* ── Colores de estado ── */
+    --success: 160 60% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 50%;
+    --warning-foreground: 0 0% 100%;
+    --error: 347 77% 50%;
+    --error-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* ── Modo oscuro: neutralizar textos con gradiente ── */
+  /* bg-clip-text text-transparent hace el texto invisible en dark */
+  .dark .bg-clip-text {
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: hsl(var(--foreground)) !important;
+    background-image: none !important;
+  }
+
+  /* Neutralizar fondos pastel del modo claro (from-*-50) en dark */
+  .dark .from-blue-50,
+  .dark .from-purple-50,
+  .dark .from-green-50,
+  .dark .from-yellow-50,
+  .dark .from-amber-50,
+  .dark .from-indigo-50,
+  .dark .from-rose-50,
+  .dark .from-red-50 {
+    --tw-gradient-from: hsl(var(--muted)) !important;
+  }
+  .dark .to-blue-50,
+  .dark .to-purple-50,
+  .dark .to-indigo-50,
+  .dark .to-green-50,
+  .dark .to-yellow-50,
+  .dark .to-amber-50,
+  .dark .to-rose-50,
+  .dark .to-red-50 {
+    --tw-gradient-to: hsl(var(--accent)) !important;
+  }
+}
+
+/* ===== Estados y utilidades — SLATE PROFESSIONAL (sin gradientes) ===== */
+@layer utilities {
+  /* Success: verde esmeralda sólido #10b981 */
+  .brand-success {
+    background-color: #10b981;
+    color: #ffffff;
+  }
+  /* Warning: ámbar sólido #f59e0b */
+  .brand-warning {
+    background-color: #f59e0b;
+    color: #ffffff;
+  }
+  /* Error: Rose Moderno #e11d48 */
+  .brand-error {
+    background-color: #e11d48;
+    color: #ffffff;
+  }
+  /* Icon bg: negro en light, blanco en dark */
+  .brand-icon-bg {
+    @apply bg-foreground text-background;
+  }
+
+  /* ── Estado success inline ── */
+  .state-success {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+  .state-warning {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+  .state-error {
+    background-color: hsl(var(--error));
+    color: hsl(var(--error-foreground));
+  }
+
+  /* Animaciones de entrada */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out both;
+  }
+  .animate-glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
+  /* Stagger delays */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-6 { animation-delay: 0.6s; }
+  .stagger-7 { animation-delay: 0.7s; }
+}
+
+/* Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.3), 0 0 10px rgba(99, 102, 241, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5), 0 0 30px rgba(99, 102, 241, 0.2);
+  }
+}
+
+@keyframes brandPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.05); 
+    opacity: 0.85;
+  }
+}
+
+/* ===== Estilos de Accesibilidad ===== */
+
+/* Modo Alto Contraste */
+.high-contrast {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  --primary: 220 100% 25%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 90%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 90%;
+  --muted-foreground: 0 0% 20%;
+  --accent: 220 100% 90%;
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 100% 30%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 90%;
+  --ring: 220 100% 50%;
+}
+
+.high-contrast.dark {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 220 100% 70%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 90%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 80%;
+  --accent: 220 100% 20%;
+  --accent-foreground: 0 0% 90%;
+  --destructive: 0 100% 70%;
+  --destructive-foreground: 0 0% 0%;
+  --border: 0 0% 80%;
+  --input: 0 0% 15%;
+  --ring: 220 100% 70%;
+}
+
+/* Modo Texto Grande */
+.large-text {
+  font-size: 118% !important;
+}
+
+.large-text h1 { font-size: 2.5rem !important; }
+.large-text h2 { font-size: 2rem !important; }
+.large-text h3 { font-size: 1.75rem !important; }
+.large-text h4 { font-size: 1.5rem !important; }
+.large-text h5 { font-size: 1.25rem !important; }
+.large-text h6 { font-size: 1.125rem !important; }
+
+.large-text button {
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1.125rem !important;
+  min-height: 48px !important;
+}
+
+.large-text input,
+.large-text textarea,
+.large-text select {
+  padding: 0.75rem !important;
+  font-size: 1.125rem !important;
+  min-height: 48px !important;
+}
+
+.large-text .text-xs { font-size: 0.875rem !important; }
+.large-text .text-sm { font-size: 1rem !important; }
+.large-text .text-base { font-size: 1.25rem !important; }
+.large-text .text-lg { font-size: 1.5rem !important; }
+.large-text .text-xl { font-size: 1.75rem !important; }
+
+/* Modo Movimiento Reducido */
+.reduced-motion,
+.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ===== Optimizaciones del Sidebar ===== */
+
+/* Evitar scroll horizontal */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Transiciones más rápidas y suaves */
+.sidebar-transition {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimizaciones específicas para el sidebar */
+[data-sidebar="sidebar"] {
+  transition: width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Evitar overflow en el contenido principal */
+[data-slot="sidebar-inset"] {
+  overflow-x: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Optimizar transiciones de navegación */
+.nav-transition {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Botón de toggle del sidebar más responsivo */
+[data-sidebar="trigger"] {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-sidebar="trigger"]:hover {
+  transform: scale(1.1);
+}
+
+/* Smooth scroll para contenido */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Evitar problemas de layout shift */
+.layout-stable {
+  contain: layout style;
+}
+
+/* Optimizaciones para móvil */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .mobile-optimized {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+/* Estilos para mejorar rendimiento */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Sidebar específicos */
+.sidebar-optimized {
+  contain: layout style paint;
+  transform: translateZ(0);
+}
+
+.sidebar-content-optimized {
+  contain: layout;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+/* Webkit scrollbar styling para mejor apariencia */
+.sidebar-content-optimized::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content-optimized::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content-optimized::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-content-optimized::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+.dark .sidebar-content-optimized::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .sidebar-content-optimized::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Navegación por Teclado */
+.keyboard-navigation *:focus-visible {
+  outline: 3px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 5px hsl(var(--ring)) !important;
+}
+
+/* Indicadores de Foco Mejorados */
+.enhanced-focus *:focus-visible {
+  outline: 4px solid hsl(var(--ring)) !important;
+  outline-offset: 3px !important;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 6px hsl(var(--ring)),
+    0 0 15px hsl(var(--ring) / 0.5) !important;
+  z-index: 999 !important;
+  position: relative !important;
+}
+
+.enhanced-focus button:focus-visible,
+.enhanced-focus a:focus-visible,
+.enhanced-focus input:focus-visible,
+.enhanced-focus textarea:focus-visible,
+.enhanced-focus select:focus-visible {
+  background-color: hsl(var(--accent)) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Screen Reader */
+.screen-reader-friendly .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.screen-reader-friendly .sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  z-index: 999;
+}
+
+/* Skip Link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px;
+  text-decoration: none;
+  z-index: 1000;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Estados ARIA mejorados */
+.high-contrast [aria-pressed="true"],
+.high-contrast [aria-selected="true"],
+.high-contrast [aria-checked="true"] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: 3px solid hsl(var(--ring)) !important;
+}
+
+.high-contrast [aria-disabled="true"],
+.high-contrast [disabled] {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  opacity: 0.6 !important;
+}
+
+/* Enlaces mejorados */
+.high-contrast a {
+  color: hsl(var(--primary)) !important;
+  text-decoration: underline !important;
+  font-weight: 600 !important;
+}
+
+.high-contrast a:hover,
+.high-contrast a:focus {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 4px !important;
+}
+
+/* Media queries para preferencias del sistema */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --border: 0 0% 20%;
+    --ring: 220 100% 50%;
+  }
+}
+
+/* Estilos específicos para el POS */
+.pos-grid-item:focus-visible {
+  transform: scale(1.05) !important;
+  z-index: 10 !important;
+}
+
+.pos-button-large {
+  min-height: 60px !important;
+  font-size: 1.25rem !important;
+  padding: 1rem 2rem !important;
+}
