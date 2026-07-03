@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -174,6 +175,39 @@ function PuntoDeVenta() {
     totalItems
   } = useCart();
 
+  // 🛡️ NUEVO: Restaurar estado guardado localmente (cliente, notas, pago)
+  useEffect(() => {
+    try {
+      const savedCliente = localStorage.getItem('pos_clienteSeleccionado');
+      const savedNotas = localStorage.getItem('pos_notas');
+      const savedMetodo = localStorage.getItem('pos_metodoPago');
+      
+      if (savedCliente) setClienteSeleccionado(JSON.parse(savedCliente));
+      if (savedNotas) setNotas(savedNotas);
+      if (savedMetodo) setMetodoPagoSeleccionado(savedMetodo);
+    } catch (e) {
+      console.error('Error restaurando estado del POS:', e);
+    }
+  }, []);
+
+  // 🛡️ NUEVO: Guardar estado localmente cuando cambie
+  useEffect(() => {
+    if (clienteSeleccionado) {
+      localStorage.setItem('pos_clienteSeleccionado', JSON.stringify(clienteSeleccionado));
+    } else {
+      localStorage.removeItem('pos_clienteSeleccionado');
+    }
+  }, [clienteSeleccionado]);
+
+  useEffect(() => {
+    if (notas) localStorage.setItem('pos_notas', notas);
+    else localStorage.removeItem('pos_notas');
+  }, [notas]);
+
+  useEffect(() => {
+    if (metodoPagoSeleccionado) localStorage.setItem('pos_metodoPago', metodoPagoSeleccionado);
+  }, [metodoPagoSeleccionado]);
+
   // Hooks especializados para cargar datos
   const { productos, categorias, isLoading: productosLoading } = useProductLoader({
     searchTerm,
@@ -338,10 +372,7 @@ function PuntoDeVenta() {
 
   // Agregar servicio directo al carrito (walk-in peluquería)
   const handleServicioAlCarrito = useCallback((servicio: any) => {
-    if (verificarDuplicadoServicio(servicio, items)) {
-      toast({ title: "Servicio ya en el carrito", description: `${servicio.nombre} ya está agregado` });
-      return;
-    }
+    // Permitir el mismo servicio varias veces (distintas empleadas)
     setServicioToAddToCart(servicio);
     setSelectEmployeeOpen(true);
   }, [items, toast]);
@@ -351,9 +382,13 @@ function PuntoDeVenta() {
     const servicio = servicioToAddToCart;
     if (!servicio) return;
 
-    const empleadoIdFinal = empleadoId === "ninguno" ? undefined : empleadoId;
+    const empleadoIdFinal = empleadoId || undefined;
+
+    // ID único por instancia: garantiza que el mismo servicio crea una línea nueva cada vez
+    const idUnico = `${servicio.id}_${Date.now()}`;
+
     const servicioCarrito: ProductoCarrito = {
-      id: servicio.id,
+      id: idUnico,
       nombre: servicio.nombre,
       precio: Number(servicio.precio) || 0,
       imagen: servicio.imagen || undefined,
@@ -512,11 +547,12 @@ function PuntoDeVenta() {
     const params = new URLSearchParams(window.location.search);
     const autoAddComanda = params.get('autoAddComanda');
 
-    if (autoAddComanda === 'true' && empresaId && items.length === 0) {
+    if (autoAddComanda === 'true' && empresaId) {
       const comandaParaCobro = localStorage.getItem('comandaParaCobro');
 
       if (comandaParaCobro) {
         try {
+          vaciarCarrito(); // Forzar vaciado antes de cargar la cuenta
           const comanda = JSON.parse(comandaParaCobro);
 
           if (comanda.empresaId === empresaId) {
@@ -596,20 +632,16 @@ function PuntoDeVenta() {
     const params = new URLSearchParams(window.location.search);
     const autoAddService = params.get('autoAddService');
 
-    if (autoAddService === 'true' && empresaId && !servicioAutoCargado && items.length === 0) {
+    if (autoAddService === 'true' && empresaId && !servicioAutoCargado) {
       const servicioParaCobro = localStorage.getItem('servicioParaCobro');
 
       if (servicioParaCobro) {
         try {
+          vaciarCarrito(); // Forzar vaciado antes de cargar el servicio
           const servicio = JSON.parse(servicioParaCobro);
 
           if (servicio.empresaId === empresaId || servicio.cliente?.empresaId === empresaId) {
-            if (verificarDuplicadoServicio(servicio, items)) {
-              toast({
-                title: "Servicio ya en el carrito",
-                description: `${servicio.nombre} ya está agregado`
-              });
-            } else {
+            {
               const servicioCarrito: ProductoCarrito = {
                 id: servicio.servicioId || servicio.id,
                 nombre: servicio.nombre,
@@ -695,7 +727,7 @@ function PuntoDeVenta() {
       pagosConReferencia, // undefined cuando no hay referencia (comportamiento original)
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
       comandaActivaId,
-      cajaId
+      cajaId // Caja registradora seleccionada
     );
 
     if (resultado) {
@@ -724,7 +756,7 @@ function PuntoDeVenta() {
       pagos, // Pasar los pagos múltiples
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
       comandaActivaId,
-      cajaId
+      cajaId // Caja registradora seleccionada
     );
 
     if (resultado) {
@@ -753,6 +785,11 @@ function PuntoDeVenta() {
 
     localStorage.removeItem('servicioParaCobro');
     localStorage.removeItem('servicioParaAgendamiento');
+    
+    // 🧹 Limpiar almacenamiento persistente del POS al terminar venta
+    localStorage.removeItem('pos_clienteSeleccionado');
+    localStorage.removeItem('pos_notas');
+    localStorage.removeItem('pos_metodoPago');
 
     if (esVeterinaria()) {
       setMascotaSeleccionada(null);

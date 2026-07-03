@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calculator, CheckCircle, Loader2, Receipt, UserIcon, Users, DollarSign, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -71,8 +71,7 @@ export function CheckoutDialog({
 
   // Estados para cajas registradoras
   const [cajas, setCajas] = useState<any[]>([]);
-  const [cajaSeleccionadaId, setCajaSeleccionadaId] = useState<string>("");
-  const [cargandoCajas, setCargandoCajas] = useState(false);
+  const [cajaIdSeleccionada, setCajaIdSeleccionada] = useState<string>("");
 
   // Estados para agregar nuevo pago
   const [nuevoMetodo, setNuevoMetodo] = useState("EFECTIVO");
@@ -112,22 +111,16 @@ export function CheckoutDialog({
       onMetodoPagoChange("EFECTIVO"); // Resetear también el método de pago
 
       // Cargar cajas registradoras activas
-      setCargandoCajas(true);
       fetch("/api/cajas")
         .then((res) => res.json())
         .then((data) => {
-          if (Array.isArray(data)) {
-            const activas = data.filter((c: any) => c.activa);
-            setCajas(activas);
-            if (activas.length > 0) {
-              setCajaSeleccionadaId(activas[0].id);
-            } else {
-              setCajaSeleccionadaId("");
-            }
+          const activas = data.filter((c: any) => c.activa);
+          setCajas(activas || []);
+          if (activas && activas.length > 0) {
+            setCajaIdSeleccionada(activas[0].id);
           }
         })
-        .catch((err) => console.error("Error al cargar cajas:", err))
-        .finally(() => setCargandoCajas(false));
+        .catch((err) => console.error("Error cargando cajas:", err));
     }
   }, [open]);
 
@@ -219,10 +212,13 @@ export function CheckoutDialog({
 
   const handleProcesar = () => {
     if (modoMultiple && onProcesarVentaMultiple) {
-      onProcesarVentaMultiple(pagos, cajaSeleccionadaId || undefined);
+      onProcesarVentaMultiple(pagos, cajaIdSeleccionada || undefined);
     } else {
       const necesitaReferencia = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "TARJETA_CREDITO", "TARJETA_DEBITO"].includes(metodoPagoSeleccionado);
-      onProcesarVenta(necesitaReferencia ? referenciaUnica || undefined : undefined, cajaSeleccionadaId || undefined);
+      onProcesarVenta(
+        necesitaReferencia ? referenciaUnica || undefined : undefined,
+        cajaIdSeleccionada || undefined
+      );
     }
   };
 
@@ -266,35 +262,6 @@ export function CheckoutDialog({
               >
                 {modoMultiple ? "Desactivar" : "Activar"}
               </Button>
-            </div>
-
-            {/* Selector de Caja Registradora */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-foreground">
-                Caja Registradora
-              </Label>
-              {cargandoCajas ? (
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Cargando cajas...
-                </div>
-              ) : cajas.length === 0 ? (
-                <div className="text-xs text-rose-500 font-semibold flex items-center gap-1.5 p-2 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 rounded-lg">
-                  <AlertCircle className="h-3.5 w-3.5" /> No hay cajas activas creadas. Se asignará a la Caja Principal.
-                </div>
-              ) : (
-                <Select value={cajaSeleccionadaId} onValueChange={setCajaSeleccionadaId}>
-                  <SelectTrigger className="h-11 bg-card">
-                    <SelectValue placeholder="Seleccione una caja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cajas.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
             </div>
 
             {!modoMultiple ? (
@@ -683,6 +650,28 @@ export function CheckoutDialog({
                   {clienteSeleccionado ? "Cambiar" : "Seleccionar"}
                 </Button>
               </div>
+            </div>
+
+            {/* Caja Destino */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                💵 Caja Destino (Registradora)
+              </label>
+              <select
+                value={cajaIdSeleccionada}
+                onChange={(e) => setCajaIdSeleccionada(e.target.value)}
+                className="w-full h-11 border-2 border-border rounded-lg bg-background px-3 py-2 text-sm sm:text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              >
+                {cajas.length === 0 ? (
+                  <option value="">Cargando cajas...</option>
+                ) : (
+                  cajas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
 

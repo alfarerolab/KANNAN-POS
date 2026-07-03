@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const fechaFiltro = searchParams.get("fecha") || new Date().toISOString().split('T')[0];
     const terminalesParam = searchParams.get("terminales"); // Comma-separated list of terminal IDs
-    const cajaId = searchParams.get("cajaId") || undefined;
+    const cajasParam = searchParams.get("cajas"); // Comma-separated list of caja IDs
 
     const inicio = new Date(`${fechaFiltro}T00:00:00-05:00`);
     const fin = new Date(`${fechaFiltro}T23:59:59.999-05:00`);
@@ -25,15 +25,21 @@ export async function GET(request: NextRequest) {
       terminalesIds = terminalesParam.split(",");
     }
 
+    let cajasIds: string[] = [];
+    if (cajasParam && cajasParam !== "all" && cajasParam.trim() !== "") {
+      cajasIds = cajasParam.split(",");
+    }
+
     // 1. Obtener todas las ventas completadas hoy del negocio
     const whereVenta: any = {
       empresaId,
       estado: "COMPLETADA",
       createdAt: { gte: inicio, lte: fin },
-      ...(cajaId && { cajaId })
     };
 
-    if (terminalesIds.length > 0) {
+    if (cajasIds.length > 0) {
+      whereVenta.cajaId = { in: cajasIds };
+    } else if (terminalesIds.length > 0) {
       const principalSelected = await db.terminal.findFirst({
         where: {
           id: { in: terminalesIds },
@@ -58,19 +64,25 @@ export async function GET(request: NextRequest) {
         usuario: true,
         terminal: true,
         pagos: true,
+        caja: true,
       },
     });
 
     // 2. Obtener todos los gastos registrados hoy
+    const whereGasto: any = {
+      empresaId,
+      fecha: { gte: inicio, lte: fin },
+    };
+    if (cajasIds.length > 0) {
+      whereGasto.cajaId = { in: cajasIds };
+    }
+
     const gastos = await db.gasto.findMany({
-      where: {
-        empresaId,
-        fecha: { gte: inicio, lte: fin },
-        ...(cajaId && { cajaId })
-      },
+      where: whereGasto,
       include: {
         usuario: true,
         categoria: true,
+        caja: true,
       },
     });
 
@@ -79,11 +91,12 @@ export async function GET(request: NextRequest) {
       fechaPago: { gte: inicio, lte: fin },
       venta: {
         empresaId,
-        ...(cajaId && { cajaId })
       },
     };
 
-    if (terminalesIds.length > 0) {
+    if (cajasIds.length > 0) {
+      wherePagosDeudas.venta.cajaId = { in: cajasIds };
+    } else if (terminalesIds.length > 0) {
       const principalSelected = await db.terminal.findFirst({
         where: {
           id: { in: terminalesIds },
@@ -109,6 +122,7 @@ export async function GET(request: NextRequest) {
             cliente: true,
             usuario: true,
             terminal: true,
+            caja: true,
           },
         },
       },
@@ -184,7 +198,7 @@ export async function GET(request: NextRequest) {
           ? `Mixto (${v.pagos.map((p: any) => p.metodoPago).join(", ")})`
           : v.metodoPago,
         importe: parseFloat(v.total.toString()),
-        terminal: v.terminal?.nombre || "Principal",
+        terminal: v.caja?.nombre || v.terminal?.nombre || "Principal",
       });
     }
 
@@ -199,7 +213,7 @@ export async function GET(request: NextRequest) {
         tipo: "Cobro (Abono deuda)",
         en: p.metodoPago,
         importe: parseFloat(p.monto.toString()),
-        terminal: p.venta.terminal?.nombre || "Principal",
+        terminal: p.venta.caja?.nombre || p.venta.terminal?.nombre || "Principal",
       });
     }
 
@@ -213,7 +227,7 @@ export async function GET(request: NextRequest) {
         tipo: "Gasto",
         en: g.metodoPago || "EFECTIVO",
         importe: -parseFloat(g.monto.toString()),
-        terminal: "General",
+        terminal: g.caja?.nombre || "General",
       });
     }
 
@@ -221,12 +235,19 @@ export async function GET(request: NextRequest) {
     movimientos.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
     // Obtener turno de caja abierto para calcular base
+    const whereTurno: any = {
+      empresaId,
+      cerradaEn: null,
+      abiertaEn: {
+        gte: inicio,
+        lte: fin,
+      }
+    };
+    if (cajasIds.length > 0) {
+      whereTurno.cajaId = { in: cajasIds };
+    }
     const turnoAbierto = await db.cajaTurno.findFirst({
-      where: {
-        empresaId,
-        cerradaEn: null,
-        ...(cajaId && { cajaId })
-      },
+      where: whereTurno,
     });
 
     const montoInicial = turnoAbierto ? parseFloat(turnoAbierto.montoInicial.toString()) : 0;
@@ -250,6 +271,7 @@ export async function GET(request: NextRequest) {
           id: turnoAbierto.id,
           abiertaEn: turnoAbierto.abiertaEn,
           montoInicial: parseFloat(turnoAbierto.montoInicial.toString()),
+          cajaId: turnoAbierto.cajaId,
         } : null,
       },
       movimientos,

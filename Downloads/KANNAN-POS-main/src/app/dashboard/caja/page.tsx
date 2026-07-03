@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -50,7 +51,6 @@ export default function CajaPage() {
   const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd"));
   const [cargandoBalance, setCargandoBalance] = useState(true);
   const [resumenBalance, setResumenBalance] = useState<CajaResumen | null>(null);
-  const [cajaSeleccionadaId, setCajaSeleccionadaId] = useState<string>("todas");
   const [movimientos, setMovimientos] = useState<any[]>([]);
 
   // --- DETALLE DE TRANSACCION (BREAKDOWN MODAL) ---
@@ -101,6 +101,9 @@ export default function CajaPage() {
   const [montoFinalReal, setMontoFinalReal] = useState(0);
   const [notasArqueo, setNotasArqueo] = useState("");
   const [procesandoTurno, setProcesandoTurno] = useState(false);
+  const [cajas, setCajas] = useState<any[]>([]);
+  const [cajaSeleccionadaId, setCajaSeleccionadaId] = useState<string>("");
+  const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
 
   // --- TAB 2: DETALLE DE COBROS STATES ---
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -139,12 +142,6 @@ export default function CajaPage() {
   const [selectedCobros, setSelectedCobros] = useState<string[]>([]);
   const [selectedGastos, setSelectedGastos] = useState<string[]>([]);
 
-  // --- TAB 4: CAJAS STATES ---
-  const [cajas, setCajas] = useState<any[]>([]);
-  const [cargandoCajas, setCargandoCajas] = useState(false);
-  const [nuevaCajaNombre, setNuevaCajaNombre] = useState("");
-  const [creandoCaja, setCreandoCaja] = useState(false);
-
   // Permissions Check
   useEffect(() => {
     if (status === "loading") return;
@@ -155,22 +152,6 @@ export default function CajaPage() {
     }
   }, [session, status, router, toast]);
 
-  const cargarCajas = useCallback(async () => {
-    if (!session) return;
-    setCargandoCajas(true);
-    try {
-      const res = await fetch("/api/cajas");
-      if (res.ok) {
-        const data = await res.json();
-        setCajas(data || []);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCargandoCajas(false);
-    }
-  }, [session]);
-
   // General Initialization
   useEffect(() => {
     if (session) {
@@ -178,58 +159,7 @@ export default function CajaPage() {
       cargarUsuarios();
       cargarCajas();
     }
-  }, [session, cargarCajas]);
-
-  const handleCrearCaja = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevaCajaNombre.trim()) return;
-    setCreandoCaja(true);
-    try {
-      const res = await fetch("/api/cajas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nuevaCajaNombre }),
-      });
-      if (!res.ok) throw new Error("No se pudo crear la caja");
-      toast({ title: "Caja creada correctamente" });
-      setNuevaCajaNombre("");
-      cargarCajas();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setCreandoCaja(false);
-    }
-  };
-
-  const toggleCajaActiva = async (id: string, activaActual: boolean) => {
-    try {
-      const res = await fetch(`/api/cajas/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activa: !activaActual }),
-      });
-      if (!res.ok) throw new Error("No se pudo actualizar la caja");
-      toast({ title: "Caja actualizada correctamente" });
-      cargarCajas();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const eliminarCaja = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta caja?")) return;
-    try {
-      const res = await fetch(`/api/cajas/${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No se pudo eliminar la caja");
-      toast({ title: "Caja eliminada correctamente" });
-      cargarCajas();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
+  }, [session]);
 
   const cargarTerminales = async () => {
     try {
@@ -240,6 +170,23 @@ export default function CajaPage() {
         // Select all by default
         if (data && data.length > 0) {
           setTerminalesSeleccionados(data.map((t: any) => t.id));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const cargarCajas = async () => {
+    try {
+      const res = await fetch("/api/cajas");
+      if (res.ok) {
+        const data = await res.json();
+        const activas = data.filter((c: any) => c.activa);
+        setCajas(activas || []);
+        if (activas && activas.length > 0) {
+          setCajaSeleccionadaId(activas[0].id);
+          setCajasSeleccionadas(activas.map((c: any) => c.id));
         }
       }
     } catch (e) {
@@ -289,15 +236,8 @@ export default function CajaPage() {
     if (!session) return;
     setCargandoBalance(true);
     try {
-      const activeIds = terminalesSeleccionados.length > 0 ? terminalesSeleccionados.join(",") : "all";
-      const params = new URLSearchParams({
-        fecha,
-        terminales: activeIds,
-      });
-      if (cajaSeleccionadaId && cajaSeleccionadaId !== "todas") {
-        params.append("cajaId", cajaSeleccionadaId);
-      }
-      const res = await fetch(`/api/caja/movimientos?${params.toString()}`);
+      const activeIds = cajasSeleccionadas.length > 0 ? cajasSeleccionadas.join(",") : "all";
+      const res = await fetch(`/api/caja/movimientos?fecha=${fecha}&cajas=${activeIds}`);
       if (!res.ok) throw new Error("Error al obtener los movimientos");
       const data = await res.json();
       setResumenBalance(data.resumen);
@@ -307,7 +247,7 @@ export default function CajaPage() {
     } finally {
       setCargandoBalance(false);
     }
-  }, [fecha, terminalesSeleccionados, cajaSeleccionadaId, session, toast]);
+  }, [fecha, cajasSeleccionadas, session, toast]);
 
   // Load Charge Logs
   const cargarCobrosLogs = useCallback(async () => {
@@ -375,25 +315,19 @@ export default function CajaPage() {
         cargarCobrosLogs();
       } else if (activeTab === "gastos") {
         cargarGastosLogs();
-      } else if (activeTab === "cajas") {
-        cargarCajas();
       }
     }
-  }, [activeTab, cargarBalance, cargarCobrosLogs, cargarGastosLogs, cargarCajas, session]);
+  }, [activeTab, cargarBalance, cargarCobrosLogs, cargarGastosLogs, session]);
 
-  // Refresh balance when terminals change, date changes or register changes
+  // Refresh balance when terminals change or date changes
   useEffect(() => {
     if (session && activeTab === "balance") {
       cargarBalance();
     }
-  }, [fecha, terminalesSeleccionados, cajaSeleccionadaId, activeTab]);
+  }, [fecha, terminalesSeleccionados, activeTab]);
 
   // --- HANDLERS FOR DRAWER TURNS ---
   const handleAbrirCaja = async () => {
-    if (!cajaSeleccionadaId || cajaSeleccionadaId === "todas") {
-      toast({ title: "Error", description: "Debe seleccionar una caja registradora específica para abrir el turno", variant: "destructive" });
-      return;
-    }
     setProcesandoTurno(true);
     try {
       const res = await fetch("/api/caja/turnos/abrir", {
@@ -416,16 +350,16 @@ export default function CajaPage() {
   };
 
   const handleCerrarCaja = async () => {
-    if (!cajaSeleccionadaId || cajaSeleccionadaId === "todas") {
-      toast({ title: "Error", description: "Debe seleccionar una caja registradora específica para cerrar el turno", variant: "destructive" });
-      return;
-    }
     setProcesandoTurno(true);
     try {
       const res = await fetch("/api/caja/turnos/cerrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ montoFinalReal, notas: notasArqueo, cajaId: cajaSeleccionadaId })
+        body: JSON.stringify({ 
+          montoFinalReal, 
+          notas: notasArqueo,
+          cajaId: resumenBalance?.turnoAbierto?.cajaId || (cajasSeleccionadas.length === 1 ? cajasSeleccionadas[0] : undefined)
+        })
       });
       if (!res.ok) {
         const err = await res.json();
@@ -546,6 +480,14 @@ export default function CajaPage() {
     }
   };
 
+  const toggleCaja = (id: string) => {
+    if (cajasSeleccionadas.includes(id)) {
+      setCajasSeleccionadas(cajasSeleccionadas.filter(c => c !== id));
+    } else {
+      setCajasSeleccionadas([...cajasSeleccionadas, id]);
+    }
+  };
+
   const shiftDay = (days: number) => {
     const d = new Date(fecha + "T00:00:00");
     const updated = addDays(d, days);
@@ -598,9 +540,6 @@ export default function CajaPage() {
             <TabsTrigger value="gastos" className="rounded-lg px-4 py-2 text-sm font-medium">
               Gastos
             </TabsTrigger>
-            <TabsTrigger value="cajas" className="rounded-lg px-4 py-2 text-sm font-medium">
-              Cajas Registradoras
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -610,44 +549,56 @@ export default function CajaPage() {
         <TabsContent value="balance" className="space-y-6 outline-none">
           
           {/* Box/Terminal Selection Checkboxes & Date Control */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center bg-card/40 border border-border/80 rounded-2xl p-5 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start bg-card/40 border border-border/80 rounded-2xl p-5 shadow-sm">
             
-            <div className="flex flex-col gap-2 w-full">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Caja Registradora:</span>
-              <Select value={cajaSeleccionadaId} onValueChange={setCajaSeleccionadaId}>
-                <SelectTrigger className="h-10 bg-card">
-                  <SelectValue placeholder="Seleccione Caja" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas las cajas</SelectItem>
-                  {cajas.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="lg:col-span-3 space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filtrar por Caja:</span>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {/* Botón para seleccionar Todas */}
+                <Button
+                  type="button"
+                  variant={cajasSeleccionadas.length === cajas.length ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (cajasSeleccionadas.length === cajas.length) {
+                      if (cajas.length > 0) setCajasSeleccionadas([cajas[0].id]);
+                    } else {
+                      setCajasSeleccionadas(cajas.map(c => c.id));
+                    }
+                  }}
+                  className="rounded-full px-4 py-1.5 text-xs font-semibold transition-all shadow-sm"
+                >
+                  ✨ Todas las Cajas
+                </Button>
 
-            <div className="lg:col-span-2 space-y-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filtrar por Punto de Venta (Terminal):</span>
-              <div className="flex flex-wrap gap-5">
-                {terminales.map((term) => (
-                  <label key={term.id} className="flex items-center gap-2.5 cursor-pointer select-none text-sm font-medium text-foreground/80 hover:text-foreground">
-                    <Checkbox
-                      checked={terminalesSeleccionados.includes(term.id)}
-                      onCheckedChange={() => toggleTerminal(term.id)}
-                    />
-                    {term.nombre}
-                  </label>
-                ))}
-                {terminales.length === 0 && (
-                  <span className="text-sm text-muted-foreground">Cargando puntos de venta...</span>
+                {/* Lista de cajas en forma de píldoras */}
+                {cajas.map((c) => {
+                  const isSelected = cajasSeleccionadas.includes(c.id);
+                  return (
+                    <Button
+                      key={c.id}
+                      type="button"
+                      variant={isSelected ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => toggleCaja(c.id)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all shadow-sm ${
+                        isSelected 
+                          ? "bg-primary/15 text-primary border-primary/30 hover:bg-primary/20 dark:bg-primary/20 dark:text-primary-foreground" 
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <span className="mr-1.5">💵</span>
+                      {c.nombre}
+                    </Button>
+                  );
+                })}
+                {cajas.length === 0 && (
+                  <span className="text-sm text-muted-foreground">Cargando cajas...</span>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-col gap-2 w-full lg:w-auto">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fecha de Consulta:</span>
               <div className="flex items-center gap-1.5 w-full">
                 <Button variant="outline" size="icon" onClick={() => shiftDay(-1)} className="h-10 w-10">
@@ -674,48 +625,53 @@ export default function CajaPage() {
           {esHoy && resumenBalance && (
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-6 py-4 bg-muted/30 border border-border/80 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3">
-                {cajaSeleccionadaId === "todas" ? (
-                  <div className="text-sm">
-                    <p className="font-semibold text-amber-800 dark:text-amber-300">
-                      Vista consolidada (Todas las cajas)
+                <span className={`inline-block w-3 h-3 rounded-full ${resumenBalance.turnoAbierto ? "bg-emerald-500 animate-pulse" : "bg-sky-500"}`} />
+                <div className="text-sm">
+                  {resumenBalance.turnoAbierto ? (
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+                      Caja "{cajas.find(c => c.id === resumenBalance.turnoAbierto.cajaId)?.nombre || "Principal"}" Abierta — Base inicial: {formatMoneda(resumenBalance.montoInicial)}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Selecciona una caja registradora específica para poder abrir o cerrar turnos.
+                  ) : (
+                    <p className="font-semibold text-sky-800 dark:text-sky-300">
+                      {cajasSeleccionadas.length === 1 
+                        ? `Caja "${cajas.find(c => c.id === cajasSeleccionadas[0])?.nombre || "seleccionada"}" en Registro Automático (Base: $0)` 
+                        : "Cajas en Registro Automático (Base: $0)"}
                     </p>
-                  </div>
-                ) : (
-                  <>
-                    <span className={`inline-block w-3 h-3 rounded-full ${resumenBalance.turnoAbierto ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                    <div className="text-sm">
-                      {resumenBalance.turnoAbierto ? (
-                        <p className="font-semibold text-emerald-800 dark:text-emerald-300">
-                          Caja Abierta — Base inicial: {formatMoneda(resumenBalance.montoInicial)}
-                        </p>
-                      ) : (
-                        <p className="font-semibold text-amber-800 dark:text-amber-300">
-                          Esta caja registradora está cerrada
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {format(new Date(`${fecha}T00:00:00`), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
-                      </p>
-                    </div>
-                  </>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(`${fecha}T00:00:00`), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    if (cajasSeleccionadas.length === 1) {
+                      setCajaSeleccionadaId(cajasSeleccionadas[0]);
+                    }
+                    setOpenCerrar(true);
+                  }} 
+                  className="h-10 px-5 shadow-sm font-semibold"
+                >
+                  Cerrar Caja (Arqueo)
+                </Button>
+                
+                {!resumenBalance.turnoAbierto && (
+                  <Button 
+                    onClick={() => {
+                      if (cajasSeleccionadas.length === 1) {
+                        setCajaSeleccionadaId(cajasSeleccionadas[0]);
+                      }
+                      setOpenAbrir(true);
+                    }} 
+                    variant="outline"
+                    className="h-10 px-5 border-primary/40 text-primary hover:bg-primary/10 shadow-sm font-semibold"
+                  >
+                    Establecer Base Manual
+                  </Button>
                 )}
               </div>
-              {cajaSeleccionadaId !== "todas" && (
-                <div>
-                  {resumenBalance.turnoAbierto ? (
-                    <Button variant="destructive" onClick={() => setOpenCerrar(true)} className="h-10 px-5 shadow-sm font-semibold">
-                      Cerrar Caja
-                    </Button>
-                  ) : (
-                    <Button onClick={() => setOpenAbrir(true)} className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold">
-                      Abrir Caja
-                    </Button>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -1257,104 +1213,6 @@ export default function CajaPage() {
           </div>
 
         </TabsContent>
-
-        {/* ========================================================================= */}
-        {/* TAB 4: GESTION DE CAJAS REGISTRADORAS */}
-        {/* ========================================================================= */}
-        <TabsContent value="cajas" className="space-y-6 outline-none">
-          
-          <div className="bg-card/40 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
-            <h3 className="font-bold text-foreground">Crear Nueva Caja Registradora</h3>
-            <p className="text-xs text-muted-foreground">Registra un nuevo flujo financiero independiente para un área o terminal de venta.</p>
-            
-            <form onSubmit={handleCrearCaja} className="flex flex-col sm:flex-row gap-3">
-              <Input
-                placeholder="Nombre de la caja (Ej. Caja Segundo Piso, Caja Barra...)"
-                value={nuevaCajaNombre}
-                onChange={(e) => setNuevaCajaNombre(e.target.value)}
-                className="flex-1 h-10 bg-card"
-                disabled={creandoCaja}
-                required
-              />
-              <Button type="submit" className="h-10 px-5 bg-primary hover:bg-primary/90 text-white font-semibold flex items-center gap-2" disabled={creandoCaja}>
-                {creandoCaja ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Crear Caja
-              </Button>
-            </form>
-          </div>
-
-          <div className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border/80">
-              <h3 className="font-bold text-foreground">Listado de Cajas Registradoras</h3>
-              <p className="text-xs text-muted-foreground">Administra el estado y activación de las cajas registradoras de tu negocio.</p>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/20">
-                    <TableHead className="font-semibold py-3 px-6">NOMBRE</TableHead>
-                    <TableHead className="font-semibold py-3 px-6">ESTADO</TableHead>
-                    <TableHead className="font-semibold py-3 px-6">FECHA CREACIÓN</TableHead>
-                    <TableHead className="font-semibold py-3 px-6 text-center">ACCIONES</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cargandoCajas ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : cajas.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                        No hay cajas registradoras configuradas.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    cajas.map((c) => (
-                      <TableRow key={c.id} className="hover:bg-muted/5 transition-colors">
-                        <TableCell className="py-4 px-6 font-semibold text-foreground">
-                          {c.nombre}
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <Badge variant={c.activa ? "default" : "secondary"} className="text-xs font-semibold px-2 py-0.5">
-                            {c.activa ? "Activa" : "Inactiva"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-4 px-6 text-sm text-muted-foreground">
-                          {format(new Date(c.createdAt), "dd/MM/yyyy")}
-                        </TableCell>
-                        <TableCell className="py-4 px-6 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleCajaActiva(c.id, c.activa)}
-                              className="h-8 text-xs px-3"
-                            >
-                              {c.activa ? "Desactivar" : "Activar"}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => eliminarCaja(c.id)}
-                              className="h-8 w-8 text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-        </TabsContent>
       </Tabs>
 
       {/* ========================================================================= */}
@@ -1371,6 +1229,21 @@ export default function CajaPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Caja Registradora *</label>
+              <Select value={cajaSeleccionadaId} onValueChange={setCajaSeleccionadaId}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecciona una caja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cajas.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">Monto Inicial (Base en efectivo) *</label>
               <Input

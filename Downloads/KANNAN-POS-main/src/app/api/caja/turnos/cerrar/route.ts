@@ -23,17 +23,32 @@ export async function POST(request: NextRequest) {
       whereCondition.cajaId = cajaId;
     }
 
-    const turnoAbierto = await db.cajaTurno.findFirst({
+    let turnoAbierto = await db.cajaTurno.findFirst({
       where: whereCondition
     });
 
+    let efectivoInicial = 0;
+    let fechaApertura = new Date();
+    fechaApertura.setHours(0, 0, 0, 0);
+
     if (!turnoAbierto) {
-      return NextResponse.json({ error: "No hay una caja abierta para cerrar" }, { status: 400 });
+      // Crear un turno automático iniciado hoy en 0
+      turnoAbierto = await db.cajaTurno.create({
+        data: {
+          empresaId: session.user.empresaId,
+          usuarioId: session.user.id,
+          cajaId: cajaId || null,
+          montoInicial: 0,
+          abiertaEn: fechaApertura,
+        }
+      });
+    } else {
+      efectivoInicial = Number(turnoAbierto.montoInicial) || 0;
+      fechaApertura = turnoAbierto.abiertaEn;
     }
 
     // Calcular el montoFinalEsperado
     // 1. Efectivo inicial
-    const efectivoInicial = Number(turnoAbierto.montoInicial) || 0;
 
     // 2. Ingresos en efectivo (ventas directas + pagos de fiados)
     const ventasEfectivo = await db.venta.findMany({
@@ -41,7 +56,7 @@ export async function POST(request: NextRequest) {
         empresaId: session.user.empresaId,
         estado: "COMPLETADA",
         createdAt: {
-          gte: turnoAbierto.abiertaEn
+          gte: fechaApertura
         },
         esVentaFiada: false,
         metodoPago: "EFECTIVO",
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest) {
           empresaId: session.user.empresaId,
           ...(turnoAbierto.cajaId && { cajaId: turnoAbierto.cajaId })
         },
-        fechaPago: { gte: turnoAbierto.abiertaEn },
+        fechaPago: { gte: fechaApertura },
         metodoPago: "EFECTIVO"
       },
       select: { monto: true }
@@ -73,7 +88,7 @@ export async function POST(request: NextRequest) {
       where: {
         empresaId: session.user.empresaId,
         fecha: {
-          gte: turnoAbierto.abiertaEn
+          gte: fechaApertura
         },
         metodoPago: "EFECTIVO",
         ...(turnoAbierto.cajaId && { cajaId: turnoAbierto.cajaId })
