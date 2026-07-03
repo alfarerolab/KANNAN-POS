@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 
 const cajaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
@@ -29,9 +30,11 @@ export async function GET(request: NextRequest) {
     if (cajas.length === 0) {
       const cajaPrincipal = await db.caja.create({
         data: {
+          id: randomUUID(),
           nombre: 'Caja Principal',
           empresaId,
           activa: true,
+          updatedAt: new Date(),
         },
       });
       cajas = [cajaPrincipal];
@@ -60,9 +63,11 @@ export async function POST(request: NextRequest) {
 
     const nuevaCaja = await db.caja.create({
       data: {
+        id: randomUUID(),
         nombre: validatedData.nombre,
         activa: validatedData.activa,
         empresaId: session.user.empresaId,
+        updatedAt: new Date(),
       },
     });
 
