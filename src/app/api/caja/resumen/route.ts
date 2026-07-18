@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
         esVentaFiada: true,
         pagosFiados: {
           select: { monto: true, metodoPago: true, fechaPago: true }
+        },
+        pagos: {
+          select: { monto: true, metodoPago: true }
         }
       }
     });
@@ -91,19 +94,28 @@ export async function GET(request: NextRequest) {
     // Evitar sumar doble si el pago es de una venta que ya entró en el ciclo anterior
     // Para simplificar, reemplazamos la lógica anterior:
     // Mejor sumar: ventas directas hoy + pagos de deudas de cualquier fecha realizados hoy
-    
+
     // Recalcular limpio:
     let ingresosEfectivo = 0;
     let ingresosTransf = 0;
     let totalIngresos = 0;
-    
+
     // Ventas completadas hoy que NO son fiadas (o fueron pagadas el mismo día de contado)
     const ventasDirectas = ventas.filter((v: any) => !v.esVentaFiada);
     for (const v of ventasDirectas) {
-      const monto = parseFloat(v.total.toString());
-      if (v.metodoPago === "EFECTIVO") ingresosEfectivo += monto;
-      else ingresosTransf += monto;
-      totalIngresos += monto;
+      if (v.metodoPago === "MIXTO" && v.pagos?.length > 0) {
+        for (const pago of v.pagos) {
+          const m = parseFloat(pago.monto.toString());
+          if (pago.metodoPago === "EFECTIVO") ingresosEfectivo += m;
+          else ingresosTransf += m;
+        }
+        totalIngresos += parseFloat(v.total.toString());
+      } else {
+        const monto = parseFloat(v.total.toString());
+        if (v.metodoPago === "EFECTIVO") ingresosEfectivo += monto;
+        else ingresosTransf += monto;
+        totalIngresos += monto;
+      }
     }
 
     // Pagos registrados hoy a cuentas fiadas
