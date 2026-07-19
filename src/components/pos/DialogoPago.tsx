@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,9 @@ const METODOS_PAGO = [
   { id: "TARJETA_CREDITO", nombre: "Tarjeta de Crédito", icon: "💳" },
   { id: "TARJETA_DEBITO", nombre: "Tarjeta de Débito", icon: "💳" },
   { id: "TRANSFERENCIA", nombre: "Transferencia", icon: "🏦" },
+  { id: "NEQUI", nombre: "Nequi", icon: "📱" },
+  { id: "DAVIPLATA", nombre: "Daviplata", icon: "📱" },
+  { id: "BANCOLOMBIA", nombre: "Bancolombia", icon: "🏦" },
   { id: "FIADO", nombre: "Crédito", icon: "📝" },
   { id: "OTRO", nombre: "Otro", icon: "💰" }
 ];
@@ -69,18 +73,66 @@ export function CheckoutDialog({
               Método de Pago
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {METODOS_PAGO.map((metodo) => (
+              {METODOS_PAGO.filter(m => !["NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(m.id)).map((metodo) => {
+                const isTransferencia = metodo.id === "TRANSFERENCIA";
+                const isTransferenciaSelected = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(metodoPagoSeleccionado);
+                const isSelected = isTransferencia ? isTransferenciaSelected : metodoPagoSeleccionado === metodo.id;
+                
+                return (
                 <Button
                   key={metodo.id}
-                  variant={metodoPagoSeleccionado === metodo.id ? "default" : "outline"}
+                  variant={isSelected ? "default" : "outline"}
                   onClick={() => setMetodoPagoSeleccionado(metodo.id)}
                   className="justify-start gap-2 h-12"
                 >
                   <span className="text-lg">{metodo.icon}</span>
                   <span className="text-sm">{metodo.nombre}</span>
                 </Button>
-              ))}
+              )})}
             </div>
+
+            {/* Sub-selector para Transferencias */}
+            {["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(metodoPagoSeleccionado) && (
+              <div className="space-y-2 mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <label className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+                  Selecciona la plataforma o banco:
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  <Button
+                    type="button"
+                    variant={metodoPagoSeleccionado === "NEQUI" ? "default" : "outline"}
+                    onClick={() => setMetodoPagoSeleccionado("NEQUI")}
+                    className={`h-9 text-xs ${metodoPagoSeleccionado === "NEQUI" ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
+                  >
+                    📱 Nequi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={metodoPagoSeleccionado === "DAVIPLATA" ? "default" : "outline"}
+                    onClick={() => setMetodoPagoSeleccionado("DAVIPLATA")}
+                    className={`h-9 text-xs ${metodoPagoSeleccionado === "DAVIPLATA" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
+                  >
+                    📱 Daviplata
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={metodoPagoSeleccionado === "BANCOLOMBIA" ? "default" : "outline"}
+                    onClick={() => setMetodoPagoSeleccionado("BANCOLOMBIA")}
+                    className={`h-9 text-xs ${metodoPagoSeleccionado === "BANCOLOMBIA" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+                  >
+                    🏦 Bancolombia
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={metodoPagoSeleccionado === "TRANSFERENCIA" ? "default" : "outline"}
+                    onClick={() => setMetodoPagoSeleccionado("TRANSFERENCIA")}
+                    className="h-9 text-xs"
+                  >
+                    🏦 Otro Banco
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Información del cliente */}

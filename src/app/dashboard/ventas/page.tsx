@@ -139,7 +139,7 @@ export default function AdvancedSalesPage() {
   };
 
   const handleExport = () => {
-    exportarDatos('json');
+    exportarDatos('csv');
   };
 
   const handleRefreshAll = () => {
@@ -240,7 +240,7 @@ export default function AdvancedSalesPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExport} className="h-11">
               <Download className="mr-2 h-4 w-4" />
-              Exportar
+              Exportar Excel
             </Button>
             <Button variant="outline" size="sm" className="h-11">
               <Settings className="mr-2 h-4 w-4" />
@@ -691,7 +691,7 @@ export default function AdvancedSalesPage() {
               </Button>
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <FileText className="mr-2 h-4 w-4" />
-                Generar Reporte
+                Exportar Excel
               </Button>
             </div>
           </div>

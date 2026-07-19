@@ -53,7 +53,10 @@ interface DialogoRegistrarPagoProps {
 const METODOS_PAGO = [
   { value: "EFECTIVO", label: "Efectivo", icon: "💵" },
   { value: "TARJETA", label: "Tarjeta", icon: "💳" },
-  { value: "TRANSFERENCIA", label: "Transferencia", icon: "🏦" },
+  { value: "TRANSFERENCIA", label: "Transferencia Bancaria", icon: "🏦" },
+  { value: "NEQUI", label: "Nequi", icon: "📱" },
+  { value: "DAVIPLATA", label: "Daviplata", icon: "📱" },
+  { value: "BANCOLOMBIA", label: "Bancolombia", icon: "🏦" },
   { value: "OTRO", label: "Otro", icon: "💰" },
 ];
 

@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { forwardRef, useState } from "react";
@@ -37,7 +38,10 @@ const METODOS_PAGO: { [key: string]: string } = {
   "EFECTIVO": "Efectivo",
   "TARJETA_CREDITO": "Tarjeta de Crédito",
   "TARJETA_DEBITO": "Tarjeta de Débito",
-  "TRANSFERENCIA": "Transferencia",
+  "TRANSFERENCIA": "Transferencia Bancaria",
+  "NEQUI": "Transferencia (Nequi)",
+  "DAVIPLATA": "Transferencia (Daviplata)",
+  "BANCOLOMBIA": "Transferencia (Bancolombia)",
   "OTRO": "Otro"
 };
 

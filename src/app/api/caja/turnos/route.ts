@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get("estado"); // 'abierto' | 'cerrado' | 'todos'
+    const cajaId = searchParams.get("cajaId");
 
     const where: any = {
       empresaId: session.user.empresaId,
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest) {
       where.cerradaEn = null;
     } else if (estado === "cerrado") {
       where.cerradaEn = { not: null };
+    }
+
+    if (cajaId && cajaId !== "todas") {
+      where.cajaId = cajaId;
     }
 
     const turnos = await db.cajaTurno.findMany({

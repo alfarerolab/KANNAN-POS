@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect } from "react";
@@ -41,7 +42,7 @@ export function useProductLoader({
         try {
           responseProductos = await servicioPOS.obtenerProductos({
             busqueda: searchTerm,
-            categoriaId: categoriaSeleccionada || undefined,
+            categoriaId: searchTerm ? undefined : (categoriaSeleccionada || undefined),
             soloDisponibles: filtroDisponibilidad === "disponibles",
             limite: 100,
             pagina: 1
@@ -51,7 +52,7 @@ export function useProductLoader({
           try {
             responseProductos = await servicioProductos.obtenerProductos({
               busqueda: searchTerm,
-              categoriaId: categoriaSeleccionada || undefined,
+              categoriaId: searchTerm ? undefined : (categoriaSeleccionada || undefined),
               activo: true,
               limite: 100,
               pagina: 1
@@ -102,7 +103,9 @@ export function useProductLoader({
         }
 
         setProductos(productosData);
-        setCategorias(responseProductos.categorias || []);
+        if (responseProductos.categorias && responseProductos.categorias.length > 0) {
+          setCategorias(responseProductos.categorias);
+        }
       } catch (error) {
         console.error("❌ Error loading products:", error);
 

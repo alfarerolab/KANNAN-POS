@@ -52,6 +52,20 @@ const PERIODO_OPTIONS: { value: Periodo; label: string }[] = [
   { value: "personalizado", label: "Personalizado" },
 ];
 
+function toUTCStartOfDay(date: Date): Date {
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+  return new Date(Date.UTC(y, m, d, 0, 0, 0, 0));
+}
+
+function toUTCEndOfDay(date: Date): Date {
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+  return new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+}
+
 function calcularRangoPeriodo(periodo: Periodo): { desde: Date; hasta: Date } {
   const ahora = new Date();
   switch (periodo) {
@@ -99,13 +113,15 @@ export default function GastosPage() {
     try {
       let desde: Date, hasta: Date;
       if (periodo === "personalizado" && fechaDesde && fechaHasta) {
-        desde = new Date(fechaDesde);
-        hasta = new Date(fechaHasta);
-        hasta.setHours(23, 59, 59);
+        const [y1, m1, d1] = fechaDesde.split("-").map(Number);
+        desde = new Date(Date.UTC(y1, m1 - 1, d1, 0, 0, 0, 0));
+        
+        const [y2, m2, d2] = fechaHasta.split("-").map(Number);
+        hasta = new Date(Date.UTC(y2, m2 - 1, d2, 23, 59, 59, 999));
       } else if (periodo !== "personalizado") {
         const rango = calcularRangoPeriodo(periodo);
-        desde = rango.desde;
-        hasta = rango.hasta;
+        desde = toUTCStartOfDay(rango.desde);
+        hasta = toUTCEndOfDay(rango.hasta);
       } else return;
 
       const params = new URLSearchParams({
@@ -157,8 +173,12 @@ export default function GastosPage() {
   const formatMoneda = (v: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);
 
-  const formatFecha = (f: string) =>
-    format(new Date(f), "dd MMM yyyy", { locale: es });
+  const formatFecha = (f: string) => {
+    const datePart = f.substring(0, 10);
+    const [year, month, day] = datePart.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return format(date, "dd MMM yyyy", { locale: es });
+  };
 
   return (
     <div className="flex flex-col gap-0 max-w-7xl mx-auto -m-6 lg:-m-8">

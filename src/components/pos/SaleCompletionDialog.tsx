@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +11,9 @@ const METODOS_PAGO = [
   { id: "TARJETA_CREDITO", nombre: "Tarjeta de Crédito", icon: "💳" },
   { id: "TARJETA_DEBITO", nombre: "Tarjeta de Débito", icon: "💳" },
   { id: "TRANSFERENCIA", nombre: "Transferencia", icon: "🏦" },
+  { id: "NEQUI", nombre: "Nequi", icon: "📱" },
+  { id: "DAVIPLATA", nombre: "Daviplata", icon: "📱" },
+  { id: "BANCOLOMBIA", nombre: "Bancolombia", icon: "🏦" },
   { id: "FIADO", nombre: "Crédito", icon: "📝" },
   { id: "OTRO", nombre: "Otro", icon: "💰" }
 ];
@@ -152,10 +156,18 @@ export function SaleCompletionDialog({
           </div>
         </div>
 
-        <DialogFooter className="pt-2">
+        <DialogFooter className="pt-2 flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto py-2.5 sm:py-3 order-last sm:order-first"
+            size="lg"
+          >
+            Cerrar
+          </Button>
           <Button
             onClick={onNewSale}
-            className="w-full py-2.5 sm:py-3"
+            className="w-full sm:flex-1 py-2.5 sm:py-3"
             size="lg"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />

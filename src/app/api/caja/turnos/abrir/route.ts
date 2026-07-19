@@ -11,18 +11,26 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { montoInicial } = body;
+    const { montoInicial, cajaId } = body;
 
-    // Check if there is already an open shift
+    // Check if there is already an open shift for this register
+    const whereCondition: any = {
+      empresaId: session.user.empresaId,
+      cerradaEn: null,
+    };
+
+    if (cajaId) {
+      whereCondition.cajaId = cajaId;
+    } else {
+      whereCondition.cajaId = null;
+    }
+
     const turnoAbierto = await db.cajaTurno.findFirst({
-      where: {
-        empresaId: session.user.empresaId,
-        cerradaEn: null
-      }
+      where: whereCondition
     });
 
     if (turnoAbierto) {
-      return NextResponse.json({ error: "Ya existe una caja abierta" }, { status: 400 });
+      return NextResponse.json({ error: "Ya existe una caja abierta para esta registradora" }, { status: 400 });
     }
 
     const nuevoTurno = await db.cajaTurno.create({
@@ -30,6 +38,7 @@ export async function POST(request: NextRequest) {
         empresaId: session.user.empresaId,
         usuarioId: session.user.id,
         montoInicial: montoInicial || 0,
+        cajaId: cajaId || null,
       }
     });
 

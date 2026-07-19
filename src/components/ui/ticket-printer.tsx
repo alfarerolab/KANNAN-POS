@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -624,6 +625,14 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
                   Descargar PDF
                 </Button>
               </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="w-full text-sm text-muted-foreground hover:text-foreground mt-2 border border-border"
+              >
+                Cerrar
+              </Button>
             </div>
           </div>
         </div>

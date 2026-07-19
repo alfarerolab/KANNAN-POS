@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const fechaFiltro = searchParams.get("fecha") || new Date().toISOString().split('T')[0];
+    const cajaId = searchParams.get("cajaId") || undefined;
 
     const inicio = new Date(`${fechaFiltro}T00:00:00-05:00`);
     const fin = new Date(`${fechaFiltro}T23:59:59.999-05:00`);
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
         empresaId,
         estado: "COMPLETADA",
         createdAt: { gte: inicio, lte: fin },
+        ...(cajaId && { cajaId })
       },
       select: {
         total: true,
@@ -33,9 +35,7 @@ export async function GET(request: NextRequest) {
         pagosFiados: {
           select: { monto: true, metodoPago: true, fechaPago: true }
         },
-        pagos: {
-          select: { monto: true, metodoPago: true }
-        }
+        pagos: true
       }
     });
 
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       where: {
         empresaId,
         fecha: { gte: inicio, lte: fin },
+        ...(cajaId && { cajaId })
       },
       select: {
         monto: true,
@@ -86,7 +87,10 @@ export async function GET(request: NextRequest) {
     // Si hay pagos de ventas fiadas de fechas anteriores que se pagaron hoy, necesitamos obtenerlos también.
     const pagosDeudas = await db.pagoVentaFiada.findMany({
       where: {
-        venta: { empresaId },
+        venta: { 
+          empresaId,
+          ...(cajaId && { cajaId })
+        },
         fechaPago: { gte: inicio, lte: fin }
       }
     });
@@ -94,28 +98,27 @@ export async function GET(request: NextRequest) {
     // Evitar sumar doble si el pago es de una venta que ya entró en el ciclo anterior
     // Para simplificar, reemplazamos la lógica anterior:
     // Mejor sumar: ventas directas hoy + pagos de deudas de cualquier fecha realizados hoy
-
+    
     // Recalcular limpio:
     let ingresosEfectivo = 0;
     let ingresosTransf = 0;
     let totalIngresos = 0;
-
+    
     // Ventas completadas hoy que NO son fiadas (o fueron pagadas el mismo día de contado)
     const ventasDirectas = ventas.filter((v: any) => !v.esVentaFiada);
     for (const v of ventasDirectas) {
-      if (v.metodoPago === "MIXTO" && v.pagos?.length > 0) {
+      const monto = parseFloat(v.total.toString());
+      if (v.pagos && v.pagos.length > 0) {
         for (const pago of v.pagos) {
-          const m = parseFloat(pago.monto.toString());
-          if (pago.metodoPago === "EFECTIVO") ingresosEfectivo += m;
-          else ingresosTransf += m;
+          const pagoMonto = parseFloat(pago.monto.toString());
+          if (pago.metodoPago === "EFECTIVO") ingresosEfectivo += pagoMonto;
+          else ingresosTransf += pagoMonto;
         }
-        totalIngresos += parseFloat(v.total.toString());
       } else {
-        const monto = parseFloat(v.total.toString());
         if (v.metodoPago === "EFECTIVO") ingresosEfectivo += monto;
         else ingresosTransf += monto;
-        totalIngresos += monto;
       }
+      totalIngresos += monto;
     }
 
     // Pagos registrados hoy a cuentas fiadas
@@ -142,7 +145,8 @@ export async function GET(request: NextRequest) {
     const turnoAbierto = await db.cajaTurno.findFirst({
       where: {
         empresaId,
-        cerradaEn: null
+        cerradaEn: null,
+        ...(cajaId && { cajaId })
       }
     });
 

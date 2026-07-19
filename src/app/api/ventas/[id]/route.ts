@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -27,7 +28,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           include: {
             producto: true,
             servicio: true,
+            empleado: {
+              select: {
+                id: true,
+                nombre: true,
+              },
+            },
           },
+        },
+        pagos: {
+          orderBy: { createdAt: 'asc' },
+        },
+        pagosFiados: {
+          orderBy: { fechaPago: 'asc' },
         },
         cliente: true,
         usuario: {
@@ -57,7 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PATCH - Actualizar el estado de una venta
+// PATCH - Actualizar el estado de una venta (también soporta edición de metodoPago e items)
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   try {
@@ -70,7 +83,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const empresaId = session.user.empresaId;
     const ventaId = resolvedParams.id;
     const body = await request.json();
-    const { estado, reciboImpreso, notas } = body;
+    const { estado, reciboImpreso, notas, metodoPago, items } = body;
 
     // Verificar que la venta exista y pertenezca a la empresa
     const ventaExistente = await db.venta.findFirst({
@@ -79,7 +92,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         empresaId,
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            producto: true,
+            servicio: true,
+            empleado: true,
+          },
+        },
       },
     });
 
@@ -90,7 +109,108 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       );
     }
 
-    // Construir objeto de datos para actualizar
+    // ── Edición administrativa: metodoPago e items ──────────────────────────
+    if (metodoPago !== undefined || (items && Array.isArray(items) && items.length > 0)) {
+      const usuarioId = session.user.id;
+      const cambios: string[] = [];
+
+      const ventaActualizada = await db.$transaction(async (prisma: import("@prisma/client").Prisma.TransactionClient) => {
+        const dataVenta: Record<string, unknown> = {};
+
+        // 1. Cambio de método de pago
+        if (metodoPago !== undefined && metodoPago !== ventaExistente.metodoPago) {
+          dataVenta.metodoPago = metodoPago;
+          cambios.push(`Método pago: ${ventaExistente.metodoPago} -> ${metodoPago}`);
+
+          // Si venía de MIXTO, limpiar registros PagoVenta parciales
+          if (ventaExistente.metodoPago === "MIXTO") {
+            await prisma.pagoVenta.deleteMany({ where: { ventaId } });
+          }
+        }
+
+        if (Object.keys(dataVenta).length > 0) {
+          await prisma.venta.update({ where: { id: ventaId }, data: dataVenta });
+        }
+
+        // 2. Actualizar empleado por ítem
+        if (items && Array.isArray(items)) {
+          // Obtener nombres de todos los usuarios (empleados) de la empresa para resolver nombres nuevos
+          const usuariosEmpresa = await prisma.usuario.findMany({
+            where: { empresaId },
+            select: { id: true, nombre: true }
+          });
+          const usuariosMap = new Map(usuariosEmpresa.map(u => [u.id, u.nombre]));
+
+          for (const item of items) {
+            if (!item.id) continue;
+            const itemExistente = ventaExistente.items.find((i: { id: string }) => i.id === item.id);
+            if (!itemExistente) continue;
+
+            const prevEmpleadoId = itemExistente.empleadoId;
+            const nextEmpleadoId = item.empleadoId;
+
+            if (prevEmpleadoId !== nextEmpleadoId) {
+              await prisma.itemVenta.update({
+                where: { id: item.id },
+                data: { empleadoId: nextEmpleadoId ?? null },
+              });
+
+              const nombreItem = itemExistente.producto?.nombre || itemExistente.servicio?.nombre || "Producto/Servicio";
+              const prevNombre = itemExistente.empleado?.nombre || "Sin asignar";
+              const nextNombre = nextEmpleadoId ? (usuariosMap.get(nextEmpleadoId) || "Asignado") : "Sin asignar";
+
+              cambios.push(`Item "${nombreItem}": de ${prevNombre} a ${nextNombre}`);
+            }
+          }
+        }
+
+        // 3. Registro en auditoría
+        if (cambios.length > 0) {
+          await prisma.auditoriaLog.create({
+            data: {
+              accion: "ACTUALIZAR",
+              tabla: "venta",
+              registroId: ventaId,
+              datosAnteriores: JSON.stringify({
+                metodoPago: ventaExistente.metodoPago,
+                estado: ventaExistente.estado,
+              }),
+              datosNuevos: JSON.stringify({
+                metodoPago: metodoPago ?? ventaExistente.metodoPago,
+                estado: ventaExistente.estado,
+                detalleItems: items,
+              }),
+              notas: `Edición de venta: ${cambios.join(", ")}`,
+              usuarioId,
+              usuarioEmail: session.user.email ?? "",
+              usuarioRol: session.user.role,
+              empresaId,
+            },
+          });
+        }
+
+        // 4. Retornar venta completa actualizada
+        return await prisma.venta.findUnique({
+          where: { id: ventaId },
+          include: {
+            items: {
+              include: {
+                producto: true,
+                servicio: true,
+                empleado: { select: { id: true, nombre: true } },
+              },
+            },
+            cliente: true,
+            usuario: { select: { id: true, nombre: true } },
+            pagos: true,
+          },
+        });
+      });
+
+      return NextResponse.json({ mensaje: "Venta actualizada correctamente", venta: ventaActualizada });
+    }
+
+    // ── Actualización de estado (lógica original del compañero) ─────────────
     const datosActualizacion: any = {};
 
     if (estado !== undefined) datosActualizacion.estado = estado;
@@ -173,6 +293,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           items: {
             include: {
               producto: true,
+              servicio: true,
+              empleado: { select: { id: true, nombre: true } },
             },
           },
           cliente: true,
@@ -180,8 +302,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             select: {
               id: true,
               nombre: true,
+              email: true,
             },
           },
+          pagos: true,
         },
       });
 
@@ -196,9 +320,30 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           id: ventaId,
         },
         data: datosActualizacion,
+        include: {
+          items: {
+            include: {
+              producto: true,
+              servicio: true,
+              empleado: { select: { id: true, nombre: true } },
+            },
+          },
+          cliente: true,
+          usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+            },
+          },
+          pagos: true,
+        },
       });
 
-      return NextResponse.json(ventaActualizada);
+      return NextResponse.json({
+        mensaje: `Venta actualizada correctamente`,
+        venta: ventaActualizada,
+      });
     }
   } catch (error) {
     console.error("Error al actualizar venta:", error);

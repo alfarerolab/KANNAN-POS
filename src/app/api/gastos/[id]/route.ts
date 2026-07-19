@@ -36,7 +36,7 @@ export async function PATCH(
     const data: any = {};
     if (concepto?.trim()) data.concepto = concepto.trim();
     if (monto && parseFloat(monto) > 0) data.monto = new Decimal(parseFloat(monto));
-    if (fecha) data.fecha = new Date(fecha);
+    if (fecha) data.fecha = new Date(fecha.includes("T") ? fecha : fecha + "T12:00:00");
     if (metodoPago) data.metodoPago = metodoPago;
     if (categoriaId) {
       const categoria = await db.categoriaGasto.findFirst({ where: { id: categoriaId, empresaId } });

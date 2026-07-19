@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 // src/app/dashboard/ventas/[id]/page.tsx
 "use client";
 
@@ -15,13 +16,18 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { HistorialPagosVentaFiada } from "@/components/ventas/HistorialPagosVentaFiada";
 import { DialogoRegistrarPago } from "@/components/ventas/DialogoRegistrarPago";
+import { DialogoEditarVenta } from "@/components/ventas/DialogoEditarVenta";
+import { HistorialAuditoriaVenta } from "@/components/ventas/HistorialAuditoriaVenta";
 import { EstadoPagoFiado } from "@/types/ventas-fiadas";
 
 const METODOS_PAGO: { [key: string]: { nombre: string; icon: string } } = {
   "EFECTIVO": { nombre: "Efectivo", icon: "💵" },
   "TARJETA_CREDITO": { nombre: "Tarjeta de Crédito", icon: "💳" },
   "TARJETA_DEBITO": { nombre: "Tarjeta de Débito", icon: "💳" },
-  "TRANSFERENCIA": { nombre: "Transferencia", icon: "🏦" },
+  "TRANSFERENCIA": { nombre: "Transferencia Bancaria", icon: "🏦" },
+  "NEQUI": { nombre: "Transferencia (Nequi)", icon: "📱" },
+  "DAVIPLATA": { nombre: "Transferencia (Daviplata)", icon: "📱" },
+  "BANCOLOMBIA": { nombre: "Transferencia (Bancolombia)", icon: "🏦" },
   "FIADO": { nombre: "Fiado", icon: "📝" },
   "MIXTO": { nombre: "Pago Mixto", icon: "💳" },
   "OTRO": { nombre: "Otro", icon: "💰" }
@@ -49,6 +55,10 @@ interface ItemVenta {
     id: string;
     nombre: string;
     precio: number;
+  };
+  empleado?: {
+    id: string;
+    nombre: string;
   };
 }
 
@@ -93,6 +103,8 @@ export default function DetalleVentaPage() {
   const [error, setError] = useState<string | null>(null);
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [dialogoPagoAbierto, setDialogoPagoAbierto] = useState(false);
+  const [dialogoEditarAbierto, setDialogoEditarAbierto] = useState(false);
+  const [auditoriaRefreshKey, setAuditoriaRefreshKey] = useState(0);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -273,6 +285,16 @@ export default function DetalleVentaPage() {
         <div className="flex flex-wrap items-center gap-2 pl-12 sm:pl-0">
           {getEstadoBadge(venta.estado)}
           {venta.esVentaFiada && getEstadoPagoBadge(venta.estadoPago)}
+          {session?.user?.role && ["ADMINISTRADOR", "SUPERADMIN", "GERENTE"].includes(session.user.role as string) && (
+            <Button
+              onClick={() => setDialogoEditarAbierto(true)}
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center gap-1.5 shadow-sm h-8 px-3 text-xs"
+            >
+              <Edit className="h-3.5 w-3.5" />
+              Editar Factura
+            </Button>
+          )}
         </div>
       </div>
 
@@ -297,6 +319,7 @@ export default function DetalleVentaPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-xs sm:text-sm">Producto</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Realizado por</TableHead>
                       <TableHead className="text-center text-xs sm:text-sm">Cantidad</TableHead>
                       <TableHead className="text-right text-xs sm:text-sm">Precio</TableHead>
                       <TableHead className="text-right text-xs sm:text-sm">Subtotal</TableHead>
@@ -319,6 +342,9 @@ export default function DetalleVentaPage() {
                                 Servicio
                               </p>
                             )}
+                        </TableCell>
+                        <TableCell className="py-2 text-xs sm:text-sm text-left text-muted-foreground font-medium">
+                          {item.empleado?.nombre || '—'}
                         </TableCell>
                         <TableCell className="text-center text-xs sm:text-sm py-2">{item.cantidad}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm py-2">{formatearMoneda(item.precio)}</TableCell>
@@ -483,16 +509,16 @@ export default function DetalleVentaPage() {
 
               {venta.pagos && venta.pagos.length > 0 && (
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-2 block">Detalles de Pago</label>
-                  <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+                  <label className="text-xs sm:text-sm font-medium mb-2 block">Desglose de Pagos</label>
+                  <div className="space-y-0 rounded-lg border overflow-hidden">
                     {venta.pagos.map((pago) => (
-                      <div key={pago.id} className="flex items-center justify-between text-xs sm:text-sm">
+                      <div key={pago.id} className="flex items-center justify-between px-3 py-2.5 border-b last:border-b-0 bg-muted/30">
                         <div className="flex items-center gap-2">
-                          <span>{METODOS_PAGO[pago.metodoPago]?.icon || "💰"}</span>
-                          <span>{METODOS_PAGO[pago.metodoPago]?.nombre || pago.metodoPago}</span>
+                          <span className="text-base">{METODOS_PAGO[pago.metodoPago]?.icon || "💰"}</span>
+                          <span className="text-xs sm:text-sm font-medium">{METODOS_PAGO[pago.metodoPago]?.nombre || pago.metodoPago}</span>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold">{formatearMoneda(pago.monto)}</p>
+                          <p className="text-sm sm:text-base font-bold">{formatearMoneda(pago.monto)}</p>
                           {pago.referencia && (
                             <p className="text-xs text-muted-foreground">Ref: {pago.referencia}</p>
                           )}
@@ -500,13 +526,10 @@ export default function DetalleVentaPage() {
                       </div>
                     ))}
                     {venta.pagos.length > 1 && (
-                      <>
-                        <Separator className="my-2" />
-                        <div className="flex justify-between items-center font-semibold text-xs sm:text-sm">
-                          <span>Total:</span>
-                          <span>{formatearMoneda(venta.total)}</span>
-                        </div>
-                      </>
+                      <div className="flex justify-between items-center px-3 py-2.5 bg-primary/10 font-semibold text-xs sm:text-sm">
+                        <span>Total:</span>
+                        <span className="text-sm sm:text-base">{formatearMoneda(venta.total)}</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -515,8 +538,8 @@ export default function DetalleVentaPage() {
               <div>
                 <label className="text-xs sm:text-sm font-medium">Vendedor</label>
                 <div className="mt-1">
-                  <p className="text-xs sm:text-sm">{venta.usuario.nombre}</p>
-                  {venta.usuario.email && (
+                  <p className="text-xs sm:text-sm">{venta.usuario?.nombre || "—"}</p>
+                  {venta.usuario?.email && (
                     <p className="text-xs text-muted-foreground break-all">{venta.usuario.email}</p>
                   )}
                 </div>
@@ -628,6 +651,15 @@ export default function DetalleVentaPage() {
               <CardTitle className="text-base sm:text-lg">Acciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 px-4 sm:px-6">
+              {session?.user?.role && ["ADMINISTRADOR", "SUPERADMIN", "GERENTE"].includes(session.user.role as string) && (
+                <Button
+                  onClick={() => setDialogoEditarAbierto(true)}
+                  className="w-full text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar Factura (Método de Pago / Empleados)
+                </Button>
+              )}
               <Button variant="outline" className="w-full text-xs sm:text-sm" onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir Factura
@@ -652,6 +684,12 @@ export default function DetalleVentaPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Historial de auditoría */}
+          <HistorialAuditoriaVenta
+            ventaId={venta.id}
+            refreshKey={auditoriaRefreshKey}
+          />
         </div>
       </div>
 
@@ -693,6 +731,16 @@ export default function DetalleVentaPage() {
           onPagoRegistrado={handlePagoRegistrado}
         />
       )}
+
+      <DialogoEditarVenta
+        abierto={dialogoEditarAbierto}
+        onClose={() => setDialogoEditarAbierto(false)}
+        venta={venta}
+        onVentaActualizada={(ventaActualizada) => {
+          setVenta(ventaActualizada?.venta || ventaActualizada);
+          setAuditoriaRefreshKey((k) => k + 1);
+        }}
+      />
     </div>
   );
 }

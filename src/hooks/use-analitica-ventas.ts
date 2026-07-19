@@ -224,20 +224,16 @@ export function useAnalisisVentas(): UseAnalisisVentasReturn {
 
     try {
       let contenido: string;
-      let tipoMime: string;
-      let extension: string;
+      let extension: string = 'xls';
 
       if (formato === 'json') {
         contenido = JSON.stringify(datos, null, 2);
-        tipoMime = 'application/json';
         extension = 'json';
       } else {
-        contenido = convertirACSV(datos);
-        tipoMime = 'text/csv';
-        extension = 'csv';
+        contenido = convertirAExcelXML(datos);
       }
 
-      const blob = new Blob([contenido], { type: tipoMime });
+      const blob = new Blob([contenido], { type: formato === 'json' ? 'application/json' : 'application/vnd.ms-excel' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       
@@ -249,7 +245,7 @@ export function useAnalisisVentas(): UseAnalisisVentasReturn {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success(`Datos exportados en formato ${formato.toUpperCase()}`);
+      toast.success(formato === 'csv' ? "Datos exportados a Excel exitosamente" : `Datos exportados en formato ${formato.toUpperCase()}`);
     } catch (err) {
       console.error('Error al exportar datos:', err);
       toast.error("Error al exportar los datos");
@@ -273,18 +269,450 @@ export function useAnalisisVentas(): UseAnalisisVentasReturn {
   };
 }
 
-function convertirACSV(datos: DatosAnalisis): string {
-  const lineas: string[] = [];
+function convertirAExcelXML(datos: DatosAnalisis): string {
+  // Definición de Estilos Excel XML
+  const xmlHeader = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:CharSet="0" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Title">
+   <Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#1B5E20"/>
+  </Style>
+  <Style ss:ID="Subtitle">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Italic="1" ss:Color="#555555"/>
+  </Style>
+  <Style ss:ID="SectionHeader">
+   <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#1B5E20"/>
+   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#A5D6A7"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TableHeader">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#388E3C" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCell">
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCellCenter">
+   <Alignment ss:Horizontal="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Currency">
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Percent">
+   <NumberFormat ss:Format="0.0%"/>
+   <Alignment ss:Horizontal="Right"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalRow">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalCurrency">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+ </Styles>
+`;
 
+  let sheetName = "Reporte de Ventas";
+  let xmlColumns = "";
+  let xmlRows = "";
+
+  // 1. Estadísticas Generales
   if (esEstadisticasGenerales(datos)) {
-    lineas.push(`Total Ventas,${datos.resumen.totalVentas}`);
-  } else if (esTendenciasVentas(datos)) {
-    datos.tendencias.forEach(item => lineas.push(`${item.fecha},${item.cantidad}`));
-  } else if (esAnalisisComparativo(datos)) {
-    lineas.push(`Ventas actuales,${datos.comparativo.ventasActuales}`);
+    sheetName = "Resumen General";
+    xmlColumns = `   <Column ss:Width="200"/>\n   <Column ss:Width="180"/>\n   <Column ss:Width="120"/>\n   <Column ss:Width="150"/>\n`;
+    
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">REPORTE GENERAL DE VENTAS</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">RESUMEN DE KPI</Data></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Total Ventas</Data></Cell><Cell ss:StyleID="DataCell"><Data ss:Type="Number">${datos.resumen.totalVentas}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Ingresos Totales</Data></Cell><Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.resumen.ingresosTotales}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Ticket Promedio</Data></Cell><Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.resumen.ticketPromedio}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Total Descuentos</Data></Cell><Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.resumen.totalDescuentos}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Total Impuestos</Data></Cell><Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.resumen.totalImpuestos}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">VENTAS DE HOY</Data></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Cantidad Ventas Hoy</Data></Cell><Cell ss:StyleID="DataCell"><Data ss:Type="Number">${datos.ventasHoy.cantidad}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Ingresos Hoy</Data></Cell><Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.ventasHoy.ingresos}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Crecimiento Ventas (Hoy)</Data></Cell><Cell ss:StyleID="Percent"><Data ss:Type="Number">${datos.ventasHoy.crecimientoVentas / 100}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell ss:StyleID="DataCell"><Data ss:Type="String">Crecimiento Ingresos (Hoy)</Data></Cell><Cell ss:StyleID="Percent"><Data ss:Type="Number">${datos.ventasHoy.crecimientoIngresos / 100}</Data></Cell></Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">VENTAS POR ESTADO</Data></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Estado</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+   </Row>\n`;
+    (datos.ventasPorEstado || []).forEach((item) => {
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${item.estado}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="Number">${item.cantidad}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.ingresos}</Data></Cell>
+   </Row>\n`;
+    });
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">TOP CLIENTES</Data></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+    <Cell ss:StyleID="SectionHeader"></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Cliente</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Email</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Compras</Data></Cell>
+   </Row>\n`;
+    (datos.topClientes || []).forEach((item) => {
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${item.nombre}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${item.email || "-"}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="Number">${item.cantidadVentas}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.totalCompras}</Data></Cell>
+   </Row>\n`;
+    });
+
+  }
+  // 2. Tendencias de Ventas
+  else if (esTendenciasVentas(datos)) {
+    sheetName = "Tendencias";
+    xmlColumns = `   <Column ss:Width="120"/>\n   <Column ss:Width="100"/>\n   <Column ss:Width="150"/>\n   <Column ss:Width="150"/>\n`;
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">TENDENCIAS DE VENTAS</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Período: ${datos.periodo} | Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Fecha</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Promedio Venta</Data></Cell>
+   </Row>\n`;
+    let sumVentas = 0;
+    let sumMonto = 0;
+    (datos.tendencias || []).forEach((item) => {
+      const fechaStr = new Date(item.fecha).toLocaleDateString("es-CO");
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${fechaStr}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${item.cantidad}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.ingresos}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.promedio}</Data></Cell>
+   </Row>\n`;
+      sumVentas += item.cantidad;
+      sumMonto += item.ingresos;
+    });
+
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Number">${sumVentas}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${sumMonto}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${sumVentas > 0 ? Math.round(sumMonto / sumVentas) : 0}</Data></Cell>
+   </Row>\n`;
+
+  }
+  // 3. Análisis Comparativo
+  else if (esAnalisisComparativo(datos)) {
+    sheetName = "Comparativo";
+    xmlColumns = `   <Column ss:Width="200"/>\n   <Column ss:Width="150"/>\n   <Column ss:Width="150"/>\n   <Column ss:Width="120"/>\n`;
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">ANÁLISIS COMPARATIVO DE VENTAS</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Período: ${datos.periodo} | Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Métrica</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Período Actual</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Período Anterior</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Crecimiento (%)</Data></Cell>
+   </Row>\n`;
+
+    xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">Cantidad de Ventas</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${datos.comparativo.ventasActuales}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${datos.comparativo.ventasAnteriores}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${datos.comparativo.crecimientoVentas / 100}</Data></Cell>
+   </Row>\n`;
+
+    xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">Ingresos Totales</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.comparativo.ingresosActuales}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.comparativo.ingresosAnteriores}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${datos.comparativo.crecimientoIngresos / 100}</Data></Cell>
+   </Row>\n`;
+
+    xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">Ticket Promedio</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.comparativo.ticketPromedioActual}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${datos.comparativo.ticketPromedioAnterior}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${datos.comparativo.crecimientoTicketPromedio / 100}</Data></Cell>
+   </Row>\n`;
+
+  }
+  // 4. Análisis de Productos
+  else if (datos && "topProductosCantidad" in datos) {
+    const prodData = datos as AnalisisProductos;
+    sheetName = "Productos";
+    xmlColumns = `   <Column ss:Width="100"/>\n   <Column ss:Width="220"/>\n   <Column ss:Width="140"/>\n   <Column ss:Width="120"/>\n   <Column ss:Width="100"/>\n   <Column ss:Width="140"/>\n   <Column ss:Width="80"/>\n   <Column ss:Width="120"/>\n`;
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">ANÁLISIS DE PRODUCTOS Y CATEGORÍAS</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">TOP PRODUCTOS POR CANTIDAD VENDIDA</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Código</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Producto</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Categoría</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Precio Unitario</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Cant. Vendida</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Promedio Venta</Data></Cell>
+   </Row>\n`;
+
+    let totalCant = 0;
+    let totalIng = 0;
+    (prodData.topProductosCantidad || []).forEach((p) => {
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${p.codigo || "-"}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${p.nombre}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${p.categoria?.nombre || "Sin Categoría"}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${p.precio}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${p.cantidadVendida}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${p.ingresosTotales}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="Number">${p.numeroVentas}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${p.promedioVenta}</Data></Cell>
+   </Row>\n`;
+      totalCant += p.cantidadVendida;
+      totalIng += p.ingresosTotales;
+    });
+
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL TOP PRODUCTOS</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Number">${totalCant}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalIng}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+   </Row>\n`;
+
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SectionHeader"><Data ss:Type="String">VENTAS POR CATEGORÍA</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Categoría</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Cant. Vendida</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Número Productos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ticket Promedio</Data></Cell>
+   </Row>\n`;
+
+    (prodData.ventasPorCategoria || []).forEach((c) => {
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${c.categoria}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${c.cantidad}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${c.ingresos}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="Number">${c.productos}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${c.promedioTicket}</Data></Cell>
+   </Row>\n`;
+    });
+
+  }
+  // 5. Rendimiento de Vendedores
+  else if (datos && "vendedores" in datos) {
+    const vendData = datos as AnalisisVendedores;
+    sheetName = "Rendimiento Vendedores";
+    xmlColumns = `   <Column ss:Width="180"/>\n   <Column ss:Width="180"/>\n   <Column ss:Width="100"/>\n   <Column ss:Width="140"/>\n   <Column ss:Width="120"/>\n   <Column ss:Width="120"/>\n   <Column ss:Width="120"/>\n`;
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">RENDIMIENTO DE TRABAJADORAS / VENDEDORES</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Nombre</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Email</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ticket Promedio</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Completadas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Tasa Conversión</Data></Cell>
+   </Row>\n`;
+
+    let totalV = 0;
+    let totalIng = 0;
+    (vendData.vendedores || []).forEach((v) => {
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${v.nombre}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${v.email || "-"}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${v.totalVentas}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${v.ingresosTotales}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${v.ticketPromedio}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="Number">${v.ventasCompletadas}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${v.tasaConversion / 100}</Data></Cell>
+   </Row>\n`;
+      totalV += v.totalVentas;
+      totalIng += v.ingresosTotales;
+    });
+
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Number">${totalV}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalIng}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalV > 0 ? Math.round(totalIng / totalV) : 0}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+   </Row>\n`;
+
+  }
+  // 6. Métodos de Pago
+  else if (datos && "metodosPago" in datos) {
+    const pagoData = datos as AnalisisMetodosPago;
+    sheetName = "Métodos de Pago";
+    xmlColumns = `   <Column ss:Width="160"/>\n   <Column ss:Width="120"/>\n   <Column ss:Width="150"/>\n   <Column ss:Width="150"/>\n   <Column ss:Width="100"/>\n   <Column ss:Width="100"/>\n`;
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">ANÁLISIS DE MÉTODOS DE PAGO</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Método de Pago</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Transacciones</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total Ingresos</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Ticket Promedio</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">% Ventas</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">% Ingresos</Data></Cell>
+   </Row>\n`;
+
+    let totalT = 0;
+    let totalIng = 0;
+    (pagoData.metodosPago || []).forEach((mp) => {
+      const pctV = parseFloat(String(mp.porcentajeVentas)) / 100;
+      const pctI = parseFloat(String(mp.porcentajeIngresos)) / 100;
+      xmlRows += `   <Row>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${mp.metodo}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="Number">${mp.cantidad}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${mp.ingresos}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${mp.ticketPromedio}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${pctV}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${pctI}</Data></Cell>
+   </Row>\n`;
+      totalT += mp.cantidad;
+      totalIng += mp.ingresos;
+    });
+
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Number">${totalT}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalIng}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalT > 0 ? Math.round(totalIng / totalT) : 0}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Percent">1.0</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="Percent">1.0</Data></Cell>
+   </Row>\n`;
+
+  } else {
+    xmlRows += `   <Row><Cell><Data ss:Type="String">Datos:</Data></Cell><Cell><Data ss:Type="String">${JSON.stringify(datos)}</Data></Cell></Row>\n`;
   }
 
-  return lineas.join("\n");
+  const xmlFooter = `  </Table>
+ </Worksheet>
+</Workbook>`;
+
+  return xmlHeader + ` <Worksheet ss:Name="${sheetName}">\n  <Table>\n` + xmlColumns + xmlRows + xmlFooter;
 }
 
 export function useEstadisticasRapidas() {

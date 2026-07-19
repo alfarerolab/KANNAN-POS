@@ -219,7 +219,8 @@ export function useSaleProcessing({
     session: any,
     pagosMultiples?: PagoDetalle[],
     consumosInternos?: Record<string, { productoId: string; cantidad: number }[]>,
-    comandaId?: string
+    comandaId?: string,
+    cajaId?: string
   ) => {
     if (items.length === 0) {
       toast({
@@ -281,12 +282,16 @@ export function useSaleProcessing({
         tipoNegocio: configuracion?.tipoNegocio,
         comandaId: comandaId, // Added comandaId
         consumosInternos: consumosInternos, // NUEVO: pasar consumos al backend
+        cajaId: cajaId || undefined,
       };
 
       // Si es pago múltiple, agregar los pagos
       if (esPagoMultiple) {
         // Usar el primer método de pago como principal (requerido por el backend)
         datosVenta.metodoPago = pagosMultiples![0].metodoPago;
+        
+        // Flag para que el backend cree los registros de PagoVenta
+        datosVenta.pagosMultiples = true;
         
         // Agregar los pagos como array
         datosVenta.pagos = pagosMultiples!.map(pago => ({

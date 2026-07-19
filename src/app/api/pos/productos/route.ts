@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { Prisma } from "@prisma/client";
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
       let minCombos = Infinity;
       for (const comp of p.componentes) {
         const stockComponente = Number(comp.componente.enStock);
-        const cantidadRequerida = comp.cantidad;
+        const cantidadRequerida = Number(comp.cantidad);
         if (cantidadRequerida <= 0) continue;
         const combosConEste = Math.floor(stockComponente / cantidadRequerida);
         minCombos = Math.min(minCombos, combosConEste);
@@ -102,17 +103,20 @@ export async function GET(req: NextRequest) {
 
 
 
-    // Consultar categorías
-    const categorias = await db.categoria.findMany({
-      where: { empresaId },
-      orderBy: { nombre: "asc" },
-      select: {
-        id: true,
-        nombre: true,
-        descripcion: true,
-        _count: { select: { productos: true } },
-      },
-    });
+    // Consultar categorías (solo si no hay búsqueda para ahorrar recursos)
+    let categorias: any[] = [];
+    if (!busqueda && !categoriaId) {
+      categorias = await db.categoria.findMany({
+        where: { empresaId },
+        orderBy: { nombre: "asc" },
+        select: {
+          id: true,
+          nombre: true,
+          descripcion: true,
+          // _count: { select: { productos: true } }, // Removido para mejorar el rendimiento (causaba demoras)
+        },
+      });
+    }
 
     return NextResponse.json({
       datos: productosTransformados, 

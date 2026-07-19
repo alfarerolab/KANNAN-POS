@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Users, TrendingUp, DollarSign, Search, Calendar,
   Download, ChevronDown, ChevronRight, Loader2, Scissors,
@@ -65,7 +65,7 @@ interface Resumen {
   totalPagado?: number;
 }
 
-type Periodo = "hoy" | "semana" | "mes" | "personalizado";
+type Periodo = "hoy" | "dia" | "semana" | "mes" | "personalizado";
 
 // ─── Fila empleado ───────────────────────────────────────────────────────────
 function FilaEmpleado({
@@ -247,18 +247,21 @@ function FilaEmpleado({
 }
 
 // ─── Página principal ─────────────────────────────────────────────────────────
-export default function ComisionesPage() {
+function ComisionesPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [empleados, setEmpleados] = useState<EmpleadoComision[]>([]);
+  const [listaEmpleados, setListaEmpleados] = useState<any[]>([]);
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [cargando, setCargando] = useState(true);
 
   const [periodo, setPeriodo] = useState<Periodo>("mes");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [fechaDesde, setFechaDesde] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [fechaHasta, setFechaHasta] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [fechaDia, setFechaDia] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [empleadoFiltro, setEmpleadoFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
   const [guardandoPago, setGuardandoPago] = useState<Record<string, boolean>>({});
@@ -276,17 +279,102 @@ export default function ComisionesPage() {
     setMetodoPago("EFECTIVO");
   };
 
+  // Cargar lista completa de empleados
+  useEffect(() => {
+    const cargarListaEmpleados = async () => {
+      try {
+        const res = await fetch("/api/pos/empleados");
+        if (res.ok) {
+          const data = await res.json();
+          setListaEmpleados(data || []);
+        }
+      } catch (e) {
+        console.error("Error al cargar lista de empleados:", e);
+      }
+    };
+    if (session) {
+      cargarListaEmpleados();
+    }
+  }, [session]);
+
+  // Inicializar estados desde URL si existen
+  useEffect(() => {
+    const p = searchParams.get("periodo");
+    const d = searchParams.get("desde");
+    const h = searchParams.get("hasta");
+    const emp = searchParams.get("empleadoId");
+
+    if (p && ["hoy", "dia", "semana", "mes", "personalizado"].includes(p)) {
+      setPeriodo(p as Periodo);
+    }
+    if (d) {
+      setFechaDesde(d);
+      setFechaDia(d);
+    }
+    if (h) setFechaHasta(h);
+    if (emp) setEmpleadoFiltro(emp);
+  }, [searchParams]);
+
+  // Sincronizar filtros a URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams();
+      params.set("periodo", periodo);
+      if (periodo === "personalizado") {
+        if (fechaDesde) params.set("desde", fechaDesde);
+        if (fechaHasta) params.set("hasta", fechaHasta);
+      } else if (periodo === "dia") {
+        if (fechaDia) params.set("desde", fechaDia);
+      }
+      if (empleadoFiltro !== "todos") {
+        params.set("empleadoId", empleadoFiltro);
+      }
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [periodo, fechaDesde, fechaHasta, fechaDia, empleadoFiltro]);
 
   const calcularRango = useCallback((): { desde: Date; hasta: Date } => {
     const ahora = new Date();
-    if (periodo === "hoy") return { desde: new Date(ahora.setHours(0, 0, 0, 0)), hasta: new Date(ahora.setHours(23, 59, 59, 999)) };
-    if (periodo === "semana") return { desde: startOfWeek(new Date(), { weekStartsOn: 1 }), hasta: new Date() };
-    if (periodo === "mes") return { desde: startOfMonth(new Date()), hasta: endOfMonth(new Date()) };
-    return { desde: new Date(fechaDesde), hasta: new Date(fechaHasta + "T23:59:59") };
-  }, [periodo, fechaDesde, fechaHasta]);
+    const obtenerFechaLocalISO = (date: Date, hora: string) => {
+      const yyyymmdd = format(date, "yyyy-MM-dd");
+      return `${yyyymmdd}T${hora}-05:00`;
+    };
+
+    if (periodo === "hoy") {
+      return {
+        desde: new Date(obtenerFechaLocalISO(ahora, "00:00:00")),
+        hasta: new Date(obtenerFechaLocalISO(ahora, "23:59:59.999"))
+      };
+    }
+    if (periodo === "dia") {
+      return {
+        desde: new Date(`${fechaDia}T00:00:00-05:00`),
+        hasta: new Date(`${fechaDia}T23:59:59.999-05:00`)
+      };
+    }
+    if (periodo === "semana") {
+      return {
+        desde: new Date(obtenerFechaLocalISO(startOfWeek(ahora, { weekStartsOn: 1 }), "00:00:00")),
+        hasta: new Date(obtenerFechaLocalISO(ahora, "23:59:59.999"))
+      };
+    }
+    if (periodo === "mes") {
+      return {
+        desde: new Date(obtenerFechaLocalISO(startOfMonth(ahora), "00:00:00")),
+        hasta: new Date(obtenerFechaLocalISO(endOfMonth(ahora), "23:59:59.999"))
+      };
+    }
+    // personalizado
+    return {
+      desde: new Date(`${fechaDesde}T00:00:00-05:00`),
+      hasta: new Date(`${fechaHasta}T23:59:59.999-05:00`)
+    };
+  }, [periodo, fechaDesde, fechaHasta, fechaDia]);
 
   const cargar = useCallback(async () => {
     if (periodo === "personalizado" && (!fechaDesde || !fechaHasta)) return;
+    if (periodo === "dia" && !fechaDia) return;
     setCargando(true);
     try {
       const { desde, hasta } = calcularRango();
@@ -306,7 +394,7 @@ export default function ComisionesPage() {
     } finally {
       setCargando(false);
     }
-  }, [calcularRango, empleadoFiltro, periodo, fechaDesde, fechaHasta, toast]);
+  }, [calcularRango, empleadoFiltro, periodo, fechaDesde, fechaHasta, fechaDia, toast]);
 
   const ejecutarPago = async () => {
     if (!pagoConfirmacion) return;
@@ -357,21 +445,207 @@ export default function ComisionesPage() {
 
   const exportarCSV = () => {
     if (!empleados.length) return;
-    const cabeceras = ["Empleado", "Servicios", "Total Vendido", "Total Comisión", "Pagado", "Pendiente"];
-    const filas = empleados.map((e) => [
-      e.nombre,
-      e.totalServicios,
-      e.totalMonto.toFixed(0),
-      (e.montoTotalGenerado ?? 0).toFixed(0),
-      (e.montoPagado ?? 0).toFixed(0),
-      e.montoComision.toFixed(0),
-    ]);
-    const csv = [cabeceras, ...filas].map((f) => f.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+    const periodoLabel =
+      periodo === "hoy" ? "Hoy" :
+      periodo === "dia" ? `Día ${fechaDia}` :
+      periodo === "semana" ? "Esta Semana" :
+      periodo === "mes" ? "Este Mes" :
+      `${fechaDesde} al ${fechaHasta}`;
+
+    // Construir SpreadsheetML XML para formato profesional
+    const xmlHeader = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:CharSet="0" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Title">
+   <Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#1B5E20"/>
+  </Style>
+  <Style ss:ID="Subtitle">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Italic="1" ss:Color="#555555"/>
+  </Style>
+  <Style ss:ID="TableHeader">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#388E3C" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCell">
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCellCenter">
+   <Alignment ss:Horizontal="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Currency">
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Percent">
+   <NumberFormat ss:Format="0.0%"/>
+   <Alignment ss:Horizontal="Right"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="SubtotalRow">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#1B5E20"/>
+   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#388E3C"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#388E3C"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="SubtotalCurrency">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#1B5E20"/>
+   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#388E3C"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#388E3C"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalRow">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalCurrency">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Liquidaciones">
+  <Table>
+   <Column ss:Width="160"/>
+   <Column ss:Width="160"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="100"/>
+`;
+
+    let xmlRows = "";
+    xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">REPORTE DE LIQUIDACIÓN DE COMISIONES</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Período: ${periodoLabel.toUpperCase()} | Generado el: ${format(new Date(), "dd/MM/yyyy HH:mm")}</Data></Cell>
+   </Row>\n`;
+    xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+    // Headers
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Empleada</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Servicio Prestado</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Fecha</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Valor del Servicio</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">% Comisión</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Comisión a Pagar</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Estado</Data></Cell>
+   </Row>\n`;
+
+    let totalValorServicios = 0;
+    let totalComisiones = 0;
+
+    for (const emp of empleados) {
+      for (const item of emp.items) {
+        const fechaItem = format(new Date(item.fecha), "yyyy-MM-dd");
+        const estado = item.pagado ? "Pagado" : "Pendiente";
+        const porcentajeDec = item.porcentajeAsignado / 100;
+
+        xmlRows += `   <Row ss:Height="19">
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${emp.nombre}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${item.servicioNombre}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${fechaItem}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.subtotal}</Data></Cell>
+    <Cell ss:StyleID="Percent"><Data ss:Type="Number">${porcentajeDec}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.comision}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${estado}</Data></Cell>
+   </Row>\n`;
+
+        totalValorServicios += item.subtotal;
+        totalComisiones += item.comision;
+      }
+
+      // Fila de subtotal por empleada
+      xmlRows += `   <Row ss:Height="20">
+    <Cell ss:StyleID="SubtotalRow"><Data ss:Type="String">SUBTOTAL — ${emp.nombre}</Data></Cell>
+    <Cell ss:StyleID="SubtotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="SubtotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="SubtotalCurrency"><Data ss:Type="Number">${emp.totalMonto}</Data></Cell>
+    <Cell ss:StyleID="SubtotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="SubtotalCurrency"><Data ss:Type="Number">${emp.montoTotalGenerado ?? 0}</Data></Cell>
+    <Cell ss:StyleID="SubtotalRow"><Data ss:Type="String"></Data></Cell>
+   </Row>\n`;
+      xmlRows += `   <Row><Cell></Cell></Row>\n`; // Fila vacía entre empleados
+    }
+
+    // Fila de total general
+    xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalValorServicios}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalComisiones}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+   </Row>\n`;
+
+    const xmlFooter = `  </Table>
+ </Worksheet>
+</Workbook>`;
+
+    const completeXml = xmlHeader + xmlRows + xmlFooter;
+    const blob = new Blob([completeXml], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `liquidaciones-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `comisiones-desglose-${format(new Date(), "yyyy-MM-dd")}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -398,14 +672,14 @@ export default function ComisionesPage() {
         </div>
         <Button variant="outline" onClick={exportarCSV} disabled={!empleados.length} className="flex items-center gap-2 h-10 px-5">
           <Download className="h-4 w-4" />
-          Exportar CSV
+          Exportar Excel
         </Button>
       </div>
 
       {/* Filtros */}
       <div className="flex flex-col md:flex-row flex-wrap gap-3 items-start md:items-center w-full">
         <div className="grid grid-cols-2 md:flex gap-1 bg-muted rounded-xl p-1 w-full md:w-auto">
-          {(["hoy", "semana", "mes", "personalizado"] as Periodo[]).map((op) => (
+          {(["hoy", "dia", "semana", "mes", "personalizado"] as Periodo[]).map((op) => (
             <button
               key={op}
               onClick={() => setPeriodo(op)}
@@ -413,10 +687,19 @@ export default function ComisionesPage() {
                 periodo === op ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {op === "hoy" ? "Hoy" : op === "personalizado" ? "Personalizado" : op === "semana" ? "Esta Semana" : "Este Mes"}
+              {op === "hoy" ? "Hoy" : op === "dia" ? "Día" : op === "personalizado" ? "Personalizado" : op === "semana" ? "Esta Semana" : "Este Mes"}
             </button>
           ))}
         </div>
+
+        {periodo === "dia" && (
+          <div className="flex gap-2 items-center w-full md:w-auto">
+            <Input type="date" value={fechaDia} onChange={(e) => setFechaDia(e.target.value)} className="w-full md:w-40 h-9" />
+            <Button size="sm" onClick={cargar} variant="outline" className="w-full md:w-auto">
+              Aplicar
+            </Button>
+          </div>
+        )}
 
         {periodo === "personalizado" && (
           <div className="flex flex-wrap md:flex-nowrap gap-2 items-center w-full md:w-auto">
@@ -438,8 +721,8 @@ export default function ComisionesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los empleados</SelectItem>
-              {empleados.map((e) => (
-                <SelectItem key={e.empleadoId} value={e.empleadoId}>{e.nombre}</SelectItem>
+              {listaEmpleados.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -633,5 +916,17 @@ export default function ComisionesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function ComisionesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <ComisionesPageContent />
+    </Suspense>
   );
 }

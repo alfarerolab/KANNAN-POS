@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 // src/components/ventas/ListaVentasTab.tsx
 "use client";
 
@@ -271,10 +272,15 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
       return <Badge variant="outline" className="border-orange-500/40 text-orange-700 dark:text-orange-400"><CreditCard className="h-3 w-3 mr-1" />Crédito</Badge>;
 
     const configs: Record<string, { color: string; label: string }> = {
-      EFECTIVO:      { color: "bg-emerald-500/15 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300",  label: "Efectivo" },
-      TARJETA:       { color: "bg-blue-500/15 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 dark:text-blue-300",    label: "Tarjeta" },
-      TRANSFERENCIA: { color: "bg-purple-500/15 text-purple-800", label: "Transferencia" },
-      MIXTO:         { color: "bg-muted text-foreground",    label: "Mixto" },
+      EFECTIVO:        { color: "bg-emerald-500/15 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300",  label: "Efectivo" },
+      TARJETA:         { color: "bg-blue-500/15 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300",               label: "Tarjeta" },
+      TARJETA_CREDITO: { color: "bg-blue-500/15 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300",               label: "Tarjeta Crédito" },
+      TARJETA_DEBITO:  { color: "bg-blue-500/15 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300",               label: "Tarjeta Débito" },
+      TRANSFERENCIA:   { color: "bg-purple-500/15 text-purple-800",                                                 label: "Transferencia" },
+      NEQUI:           { color: "bg-fuchsia-500/15 text-fuchsia-800 dark:text-fuchsia-300",                         label: "Nequi" },
+      DAVIPLATA:       { color: "bg-red-500/15 text-red-800 dark:text-red-300",                                     label: "Daviplata" },
+      BANCOLOMBIA:     { color: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",                         label: "Bancolombia" },
+      MIXTO:           { color: "bg-muted text-foreground",                                                         label: "Mixto" },
     };
     const config = configs[metodo] || { color: "bg-muted text-foreground", label: metodo };
     return <Badge variant="outline" className={config.color}>{config.label}</Badge>;
@@ -298,8 +304,247 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
   const handleImprimirTicket = (id: string) => window.open(`/dashboard/pos/ticket?ventaId=${id}`, "_blank");
 
   const handleExportar = async () => {
-    toast.info("Exportando ventas...");
-    toast.success("Ventas exportadas exitosamente");
+    try {
+      toast.info("Exportando ventas a Excel...");
+      const params = new URLSearchParams();
+      if (filtros.busqueda) params.append("busqueda", filtros.busqueda);
+      if (filtros.metodoPago !== "todos") params.append("metodoPago", filtros.metodoPago);
+      if (filtros.estado !== "todos") params.append("estado", filtros.estado);
+      if (filtros.estadoPago !== "todos") params.append("estadoPago", filtros.estadoPago);
+      if (filtros.fechaInicio) params.append("fechaInicio", filtros.fechaInicio);
+      if (filtros.fechaFin) params.append("fechaFin", filtros.fechaFin);
+      if (filtros.soloFiadas) params.append("soloFiadas", "true");
+      params.append("pagina", "1");
+      params.append("limite", "10000"); // Descargar todo el set filtrado
+
+      const response = await fetch(`/api/ventas?${params.toString()}`);
+      if (!response.ok) throw new Error("Error al obtener ventas");
+
+      const data = await response.json();
+      const datosVentas = data.datos || [];
+
+      if (datosVentas.length === 0) {
+        toast.error("No hay ventas para exportar");
+        return;
+      }
+
+      // Estilos y Cabeceras Excel XML
+      const xmlHeader = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:CharSet="0" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Title">
+   <Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#1B5E20"/>
+  </Style>
+  <Style ss:ID="Subtitle">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Italic="1" ss:Color="#555555"/>
+  </Style>
+  <Style ss:ID="TableHeader">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#388E3C" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCell">
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataCellCenter">
+   <Alignment ss:Horizontal="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Currency">
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalRow">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TotalCurrency">
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1B5E20" ss:Pattern="Solid"/>
+   <NumberFormat ss:Format="$#,##0"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#1B5E20"/>
+   </Borders>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Historial Ventas">
+  <Table>
+   <Column ss:Width="100"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="120"/>
+   <Column ss:Width="120"/>
+   <Column ss:Width="130"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="120"/>
+   <Column ss:Width="130"/>
+   <Column ss:Width="130"/>
+   <Column ss:Width="110"/>
+`;
+
+      let xmlRows = "";
+      
+      // Títulos
+      xmlRows += `   <Row ss:Height="24">
+    <Cell ss:StyleID="Title"><Data ss:Type="String">HISTORIAL DE VENTAS</Data></Cell>
+   </Row>\n`;
+      xmlRows += `   <Row ss:Height="18">
+    <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generado el: ${new Date().toLocaleString("es-CO")}</Data></Cell>
+   </Row>\n`;
+      xmlRows += `   <Row><Cell></Cell></Row>\n`;
+
+      // Cabeceras
+      xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Folio / ID</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Fecha de Venta</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Cliente</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Email Cliente</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Tipo de Venta</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Método de Pago</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Total</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Estado</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Pago (Fiados)</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Saldo Pendiente</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Monto Pagado</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Vencimiento</Data></Cell>
+   </Row>\n`;
+
+      let totalVentasMonto = 0;
+      let totalSaldoPendiente = 0;
+      let totalMontoPagado = 0;
+
+      datosVentas.forEach((venta: any) => {
+        const folio = venta.folio || venta.id.substring(0, 8).toUpperCase();
+        const fecha = formatearFecha(venta.fechaCreacion);
+        const cliente = venta.cliente?.nombre || "Cliente General";
+        const email = venta.cliente?.email || "-";
+        const tipo = venta.esVentaFiada ? "Crédito (Fiada)" : "Venta Directa";
+        
+        let metodo = "";
+        if (venta.esVentaFiada) {
+          metodo = "Crédito";
+        } else {
+          const metodosDict: Record<string, string> = {
+            EFECTIVO: "Efectivo",
+            TARJETA: "Tarjeta",
+            TARJETA_CREDITO: "Tarjeta de Crédito",
+            TARJETA_DEBITO: "Tarjeta de Débito",
+            TRANSFERENCIA: "Transferencia",
+            NEQUI: "Nequi",
+            DAVIPLATA: "Daviplata",
+            BANCOLOMBIA: "Bancolombia",
+            MIXTO: "Mixto"
+          };
+          metodo = metodosDict[venta.metodoPago] || venta.metodoPago || "-";
+        }
+
+        const total = Number(venta.total) || 0;
+        const estado = venta.estado || "-";
+        const estadoPago = venta.esVentaFiada ? (venta.estadoPago || "PENDIENTE") : "N/A";
+        const saldoPendiente = venta.esVentaFiada ? (Number(venta.saldoPendiente) || 0) : 0;
+        const montoPagado = venta.esVentaFiada ? (Number(venta.montoPagado) || 0) : total;
+        const vencimiento = venta.esVentaFiada && venta.fechaVencimiento ? formatearFecha(venta.fechaVencimiento).split(",")[0] : "-";
+
+        xmlRows += `   <Row ss:Height="19">
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${folio}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${fecha}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${cliente}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${email}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${tipo}</Data></Cell>
+    <Cell ss:StyleID="DataCell"><Data ss:Type="String">${metodo}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${total}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${estado}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${estadoPago}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${saldoPendiente}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${montoPagado}</Data></Cell>
+    <Cell ss:StyleID="DataCellCenter"><Data ss:Type="String">${vencimiento}</Data></Cell>
+   </Row>\n`;
+
+        totalVentasMonto += total;
+        if (venta.esVentaFiada) {
+          totalSaldoPendiente += saldoPendiente;
+          totalMontoPagado += montoPagado;
+        } else {
+          totalMontoPagado += total;
+        }
+      });
+
+      // Fila Totales
+      xmlRows += `   <Row ss:Height="22">
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String">${datosVentas.length} ventas</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalVentasMonto}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalSaldoPendiente}</Data></Cell>
+    <Cell ss:StyleID="TotalCurrency"><Data ss:Type="Number">${totalMontoPagado}</Data></Cell>
+    <Cell ss:StyleID="TotalRow"><Data ss:Type="String"></Data></Cell>
+   </Row>\n`;
+
+      const xmlFooter = `  </Table>
+ </Worksheet>
+</Workbook>`;
+
+      const completeXml = xmlHeader + xmlRows + xmlFooter;
+      const blob = new Blob([completeXml], { type: "application/vnd.ms-excel" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte-ventas-${new Date().toISOString().split("T")[0]}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast.success("Ventas exportadas a Excel exitosamente");
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al exportar las ventas");
+    }
   };
 
   const handleLimpiarFiltros = () => {
@@ -456,6 +701,9 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
                   <SelectItem value="EFECTIVO">Efectivo</SelectItem>
                   <SelectItem value="TARJETA">Tarjeta</SelectItem>
                   <SelectItem value="TRANSFERENCIA">Transferencia</SelectItem>
+                  <SelectItem value="NEQUI">Nequi</SelectItem>
+                  <SelectItem value="DAVIPLATA">Daviplata</SelectItem>
+                  <SelectItem value="BANCOLOMBIA">Bancolombia</SelectItem>
                   <SelectItem value="MIXTO">Mixto</SelectItem>
                   <SelectItem value="FIADO">Crédito</SelectItem>
                 </SelectContent>
@@ -552,7 +800,7 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
             </div>
             <Button onClick={handleExportar} variant="outline" size="sm" className="h-8 sm:h-9 shrink-0">
               <Download className="mr-1 sm:mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Exportar</span>
+              <span className="hidden sm:inline">Exportar Excel</span>
             </Button>
           </div>
         </CardHeader>

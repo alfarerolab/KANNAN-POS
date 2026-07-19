@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { User, Loader2, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Empleado {
   id: string;
@@ -36,16 +37,22 @@ export function SelectEmployeeDialog({
   cargandoEmpleados,
   onConfirm,
 }: SelectEmployeeDialogProps) {
-  const [selectedId, setSelectedId] = useState<string>("ninguno");
+  const [selectedId, setSelectedId] = useState<string>("");
 
   // Reset selected ID when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedId("ninguno");
+      setSelectedId("");
     }
   }, [open, servicio]);
 
   const handleConfirm = () => {
+    if (!selectedId) {
+      toast.error("Selección obligatoria", {
+        description: "Debes seleccionar un empleado antes de agregar este servicio al carrito."
+      });
+      return;
+    }
     onConfirm(selectedId);
     onOpenChange(false);
   };
@@ -77,28 +84,30 @@ export function SelectEmployeeDialog({
                 <Loader2 className="h-4 w-4 animate-spin" /> Cargando empleados...
               </div>
             ) : (
-              <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className={selectedId === "ninguno" ? "border-amber-400" : ""}>
-                  <SelectValue placeholder="Seleccionar empleado..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ninguno" className="text-amber-600 font-medium">
-                    Sin asignar (Se puede asignar luego)
-                  </SelectItem>
-                  {empleados.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{emp.nombre}</span>
-                        {emp.porcentajeComision && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {emp.porcentajeComision}%
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={selectedId} onValueChange={setSelectedId}>
+                  <SelectTrigger className={!selectedId ? "border-red-400 focus:ring-red-400" : "border-green-500"}>
+                    <SelectValue placeholder="Seleccionar empleado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {empleados.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{emp.nombre}</span>
+                          {emp.porcentajeComision && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {emp.porcentajeComision}%
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedId && (
+                  <p className="text-xs text-red-500 mt-1">Debes seleccionar un empleado para continuar.</p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -107,7 +116,7 @@ export function SelectEmployeeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={cargandoEmpleados}>
+          <Button onClick={handleConfirm} disabled={cargandoEmpleados || !selectedId}>
             <CheckCircle2 className="h-4 w-4 mr-2" />
             Agregar al carrito
           </Button>

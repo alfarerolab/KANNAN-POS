@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +16,9 @@ const METODOS_PAGO = [
   { id: "TARJETA_CREDITO", nombre: "Tarjeta de Crédito", icon: "💳" },
   { id: "TARJETA_DEBITO", nombre: "Tarjeta de Débito", icon: "💳" },
   { id: "TRANSFERENCIA", nombre: "Transferencia", icon: "🏦" },
+  { id: "NEQUI", nombre: "Nequi", icon: "📱" },
+  { id: "DAVIPLATA", nombre: "Daviplata", icon: "📱" },
+  { id: "BANCOLOMBIA", nombre: "Bancolombia", icon: "🏦" },
   { id: "FIADO", nombre: "Crédito", icon: "📝" },
   { id: "OTRO", nombre: "Otro", icon: "💰" }
 ];
@@ -40,9 +44,9 @@ interface CheckoutDialogProps {
   totalItems: number;
   formatearMoneda: (valor: number) => string;
   procesandoVenta: boolean;
-  onProcesarVenta: (referencia?: string) => void;
+  onProcesarVenta: (referencia?: string, cajaId?: string) => void;
   // Nuevas props para pagos múltiples
-  onProcesarVentaMultiple?: (pagos: PagoDetalle[]) => void;
+  onProcesarVentaMultiple?: (pagos: PagoDetalle[], cajaId?: string) => void;
 }
 
 export function CheckoutDialog({
@@ -65,6 +69,10 @@ export function CheckoutDialog({
   // Estados para pagos múltiples
   const [modoMultiple, setModoMultiple] = useState(false);
   const [pagos, setPagos] = useState<PagoDetalle[]>([]);
+
+  // Estados para cajas registradoras
+  const [cajas, setCajas] = useState<any[]>([]);
+  const [cajaIdSeleccionada, setCajaIdSeleccionada] = useState<string>("");
 
   // Estados para agregar nuevo pago
   const [nuevoMetodo, setNuevoMetodo] = useState("EFECTIVO");
@@ -102,6 +110,18 @@ export function CheckoutDialog({
       setMostrarCambio(false);
       setDiasCredito("30"); // Resetear días de crédito
       onMetodoPagoChange("EFECTIVO"); // Resetear también el método de pago
+
+      // Cargar cajas registradoras activas
+      fetch("/api/cajas")
+        .then((res) => res.json())
+        .then((data) => {
+          const activas = data.filter((c: any) => c.activa);
+          setCajas(activas || []);
+          if (activas && activas.length > 0) {
+            setCajaIdSeleccionada(activas[0].id);
+          }
+        })
+        .catch((err) => console.error("Error cargando cajas:", err));
     }
   }, [open]);
 
@@ -193,10 +213,13 @@ export function CheckoutDialog({
 
   const handleProcesar = () => {
     if (modoMultiple && onProcesarVentaMultiple) {
-      onProcesarVentaMultiple(pagos);
+      onProcesarVentaMultiple(pagos, cajaIdSeleccionada || undefined);
     } else {
-      const necesitaReferencia = ["TRANSFERENCIA", "TARJETA_CREDITO", "TARJETA_DEBITO"].includes(metodoPagoSeleccionado);
-      onProcesarVenta(necesitaReferencia ? referenciaUnica || undefined : undefined);
+      const necesitaReferencia = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA", "TARJETA_CREDITO", "TARJETA_DEBITO"].includes(metodoPagoSeleccionado);
+      onProcesarVenta(
+        necesitaReferencia ? referenciaUnica || undefined : undefined,
+        cajaIdSeleccionada || undefined
+      );
     }
   };
 
@@ -250,19 +273,67 @@ export function CheckoutDialog({
                     Método de Pago
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {METODOS_PAGO.map((metodo) => (
+                    {METODOS_PAGO.filter(m => !["NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(m.id)).map((metodo) => {
+                      const isTransferencia = metodo.id === "TRANSFERENCIA";
+                      const isTransferenciaSelected = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(metodoPagoSeleccionado);
+                      const isSelected = isTransferencia ? isTransferenciaSelected : metodoPagoSeleccionado === metodo.id;
+                      
+                      return (
                       <Button
                         key={metodo.id}
                         type="button"
-                        variant={metodoPagoSeleccionado === metodo.id ? "default" : "outline"}
+                        variant={isSelected ? "default" : "outline"}
                         onClick={() => onMetodoPagoChange(metodo.id)}
                         className="justify-start gap-2 h-11 sm:h-12 text-xs sm:text-sm"
                       >
                         <span className="text-base sm:text-lg">{metodo.icon}</span>
                         <span>{metodo.nombre}</span>
                       </Button>
-                    ))}
+                    )})}
                   </div>
+
+                  {/* Sub-selector para Transferencias */}
+                  {["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(metodoPagoSeleccionado) && (
+                    <div className="space-y-2 mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                      <label className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+                        Selecciona la plataforma o banco:
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        <Button
+                          type="button"
+                          variant={metodoPagoSeleccionado === "NEQUI" ? "default" : "outline"}
+                          onClick={() => onMetodoPagoChange("NEQUI")}
+                          className={`h-9 text-xs ${metodoPagoSeleccionado === "NEQUI" ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
+                        >
+                          📱 Nequi
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={metodoPagoSeleccionado === "DAVIPLATA" ? "default" : "outline"}
+                          onClick={() => onMetodoPagoChange("DAVIPLATA")}
+                          className={`h-9 text-xs ${metodoPagoSeleccionado === "DAVIPLATA" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
+                        >
+                          📱 Daviplata
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={metodoPagoSeleccionado === "BANCOLOMBIA" ? "default" : "outline"}
+                          onClick={() => onMetodoPagoChange("BANCOLOMBIA")}
+                          className={`h-9 text-xs ${metodoPagoSeleccionado === "BANCOLOMBIA" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+                        >
+                          🏦 Bancolombia
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={metodoPagoSeleccionado === "TRANSFERENCIA" ? "default" : "outline"}
+                          onClick={() => onMetodoPagoChange("TRANSFERENCIA")}
+                          className="h-9 text-xs"
+                        >
+                          🏦 Otro Banco
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Campo de valor recibido (solo efectivo) */}
@@ -309,12 +380,14 @@ export function CheckoutDialog({
 
                 {/* Campo de referencia para transferencia y tarjeta */}
                 {(metodoPagoSeleccionado === "TRANSFERENCIA" ||
+                  metodoPagoSeleccionado === "NEQUI" ||
+                  metodoPagoSeleccionado === "DAVIPLATA" ||
                   metodoPagoSeleccionado === "TARJETA_CREDITO" ||
                   metodoPagoSeleccionado === "TARJETA_DEBITO") && (
                   <div className="space-y-3 p-3 sm:p-4 rounded-lg border-2 border-blue-500/30 bg-blue-500/10 dark:bg-blue-950/20 dark:border-blue-800">
                     <Label htmlFor="referenciaUnica" className="text-sm font-semibold text-blue-800 dark:text-blue-300 dark:text-blue-300 flex items-center gap-2">
-                      {metodoPagoSeleccionado === "TRANSFERENCIA" ? "🏦" : "💳"}
-                      {metodoPagoSeleccionado === "TRANSFERENCIA"
+                      {["NEQUI", "DAVIPLATA"].includes(metodoPagoSeleccionado) ? "📱" : metodoPagoSeleccionado === "TRANSFERENCIA" ? "🏦" : "💳"}
+                      {["TRANSFERENCIA", "NEQUI", "DAVIPLATA"].includes(metodoPagoSeleccionado)
                         ? "N° de Referencia / Comprobante"
                         : "N° de Autorización del Datafono"}
                       <span className="text-xs font-normal text-blue-600 dark:text-blue-400 dark:text-blue-400">(opcional)</span>
@@ -323,7 +396,7 @@ export function CheckoutDialog({
                       id="referenciaUnica"
                       type="text"
                       placeholder={
-                        metodoPagoSeleccionado === "TRANSFERENCIA"
+                        ["TRANSFERENCIA", "NEQUI", "DAVIPLATA"].includes(metodoPagoSeleccionado)
                           ? "Ej: 123456789"
                           : "Ej: 789456"
                       }
@@ -332,7 +405,7 @@ export function CheckoutDialog({
                       className="h-11 text-base border-blue-500/40 focus:border-blue-500"
                     />
                     <p className="text-xs text-blue-600 dark:text-blue-400 dark:text-blue-400">
-                      {metodoPagoSeleccionado === "TRANSFERENCIA"
+                      {["TRANSFERENCIA", "NEQUI", "DAVIPLATA"].includes(metodoPagoSeleccionado)
                         ? "Se guarda en la venta y aparece en el ticket para facilitar el cuadre de caja."
                         : "Número de aprobación que muestra el datafono al finalizar la transacción."}
                     </p>
@@ -419,11 +492,16 @@ export function CheckoutDialog({
                   <Label className="text-sm font-semibold">Agregar Pago</Label>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {METODOS_PAGO.map((metodo) => (
+                    {METODOS_PAGO.filter(m => !["NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(m.id)).map((metodo) => {
+                      const isTransferencia = metodo.id === "TRANSFERENCIA";
+                      const isTransferenciaSelected = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(nuevoMetodo);
+                      const isSelected = isTransferencia ? isTransferenciaSelected : nuevoMetodo === metodo.id;
+                      
+                      return (
                       <Button
                         key={metodo.id}
                         type="button"
-                        variant={nuevoMetodo === metodo.id ? "default" : "outline"}
+                        variant={isSelected ? "default" : "outline"}
                         onClick={() => setNuevoMetodo(metodo.id)}
                         size="sm"
                         className="justify-start gap-2 h-9"
@@ -431,8 +509,51 @@ export function CheckoutDialog({
                         <span className="text-sm">{metodo.icon}</span>
                         <span className="text-xs">{metodo.nombre}</span>
                       </Button>
-                    ))}
+                    )})}
                   </div>
+
+                  {/* Sub-selector para Transferencias en pago mixto */}
+                  {["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"].includes(nuevoMetodo) && (
+                    <div className="space-y-2 mt-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                      <label className="text-[10px] uppercase font-bold text-blue-800 dark:text-blue-300 tracking-wider">
+                        Plataforma o Banco:
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        <Button
+                          type="button"
+                          variant={nuevoMetodo === "NEQUI" ? "default" : "outline"}
+                          onClick={() => setNuevoMetodo("NEQUI")}
+                          className={`h-8 text-[11px] ${nuevoMetodo === "NEQUI" ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
+                        >
+                          📱 Nequi
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={nuevoMetodo === "DAVIPLATA" ? "default" : "outline"}
+                          onClick={() => setNuevoMetodo("DAVIPLATA")}
+                          className={`h-8 text-[11px] ${nuevoMetodo === "DAVIPLATA" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
+                        >
+                          📱 Daviplata
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={nuevoMetodo === "BANCOLOMBIA" ? "default" : "outline"}
+                          onClick={() => setNuevoMetodo("BANCOLOMBIA")}
+                          className={`h-8 text-[11px] ${nuevoMetodo === "BANCOLOMBIA" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+                        >
+                          🏦 Bancolombia
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={nuevoMetodo === "TRANSFERENCIA" ? "default" : "outline"}
+                          onClick={() => setNuevoMetodo("TRANSFERENCIA")}
+                          className="h-8 text-[11px]"
+                        >
+                          🏦 Otro
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="nuevoMonto" className="text-xs">Monto</Label>
@@ -546,6 +667,28 @@ export function CheckoutDialog({
                   {clienteSeleccionado ? "Cambiar" : "Seleccionar"}
                 </Button>
               </div>
+            </div>
+
+            {/* Caja Destino */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                💵 Caja Destino (Registradora)
+              </label>
+              <select
+                value={cajaIdSeleccionada}
+                onChange={(e) => setCajaIdSeleccionada(e.target.value)}
+                className="w-full h-11 border-2 border-border rounded-lg bg-background px-3 py-2 text-sm sm:text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              >
+                {cajas.length === 0 ? (
+                  <option value="">Cargando cajas...</option>
+                ) : (
+                  cajas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
 

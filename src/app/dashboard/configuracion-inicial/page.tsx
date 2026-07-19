@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -318,7 +319,8 @@ export default function ConfiguracionInicial() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al guardar configuración');
+        console.error('Server validation error:', errorData);
+        throw new Error(errorData.error + (errorData.detalles ? ': ' + JSON.stringify(errorData.detalles) : '') || 'Error al guardar configuración');
       }
 
       // Actualizar sesión de NextAuth para que refleje configuracionCompletada: true

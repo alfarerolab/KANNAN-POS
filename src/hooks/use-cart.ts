@@ -60,15 +60,8 @@ export const useCart = () => {
       const savedTimestamp = localStorage.getItem(CART_TIMESTAMP_KEY);
       
       if (savedCart && savedTimestamp) {
-        const timestamp = parseInt(savedTimestamp);
-        const hoursPassed = (Date.now() - timestamp) / (1000 * 60 * 60);
-        
-        if (hoursPassed < 1) { // ⏰ Carrito válido por 1 hora
-          setItems(JSON.parse(savedCart));
-        } else {
-          localStorage.removeItem(CART_STORAGE_KEY);
-          localStorage.removeItem(CART_TIMESTAMP_KEY);
-        }
+        // 🛡️ El carrito ahora NO expira por tiempo, persiste hasta que se completa la venta o se borra manualmente
+        setItems(JSON.parse(savedCart));
       }
     } catch (error) {
       console.error('Error al cargar carrito:', error);
@@ -159,29 +152,9 @@ export const useCart = () => {
           incluyeIva: servicio.incluyeIva
         };
 
-        const indiceExistente = prevItems.findIndex(
-          (item) => item.producto.id === servicio.id && item.producto.esServicio
-        );
-
-        if (indiceExistente !== -1) {
-          const itemsActualizados = [...prevItems];
-          const item = itemsActualizados[indiceExistente];
-          const nuevaCantidad = item.cantidad + 1;
-
-          itemsActualizados[indiceExistente] = {
-            ...item,
-            cantidad: nuevaCantidad,
-            subtotal: calcularSubtotal(servicioProducto, nuevaCantidad),
-          };
-
-          toastMessage = {
-            title: "Servicio actualizado",
-            description: `${servicio.nombre} actualizado (${nuevaCantidad})`
-          };
-          return itemsActualizados;
-        } else {
+        // Siempre agregar como nuevo ítem (permite mismo servicio con distintas empleadas)
           const nuevoItem: ItemCarrito = {
-            id: servicio.id,
+            id: `srv_${servicio.id}_${Date.now()}`,
             producto: servicioProducto,
             cantidad: 1,
             unidadMedida: 'servicio',
@@ -193,7 +166,6 @@ export const useCart = () => {
             description: `${servicio.nombre} agregado al carrito`
           };
           return [...prevItems, nuevoItem];
-        }
       } catch (error) {
         toastMessage = {
           title: "Error",
@@ -238,25 +210,7 @@ export const useCart = () => {
           producto = input;
         }
 
-        // Verificar servicios duplicados
-        if (producto.esServicio) {
-          const servicioExistente = prevItems.find(item => {
-            if (!item.producto.esServicio) return false;
-            if (producto.citaId && item.producto.citaId === producto.citaId) return true;
-            const servicioIdNuevo = producto.servicioId || producto.id;
-            const servicioIdExistente = item.producto.servicioId || item.producto.id;
-            return servicioIdNuevo === servicioIdExistente;
-          });
-
-          if (servicioExistente) {
-            toastMessage = {
-              title: "Servicio ya agregado",
-              description: `${producto.nombre} ya está en el carrito`,
-              variant: "destructive"
-            };
-            return prevItems;
-          }
-        }
+        // Los servicios siempre se agregan como ítems separados (cada empleada puede hacer el mismo servicio)
 
         // Buscar item existente — SOLO fusionar si coinciden producto Y estado de cortesía
         const indiceExistente = !producto.esServicio 

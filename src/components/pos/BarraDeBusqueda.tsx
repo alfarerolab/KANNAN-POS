@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -7,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Mic, Square, X, SlidersHorizontal, AlertCircle, Radio, Sparkles } from "lucide-react";
+import { Search, Mic, Square, X, SlidersHorizontal, AlertCircle, Radio, Sparkles, Package, Scissors } from "lucide-react";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +38,8 @@ interface UnifiedSearchBarProps {
   onAddToCart: (producto: any) => void;
   placeholder?: string;
   vistaActual?: "productos" | "servicios";
+  tieneServicios?: boolean;
+  onVistaActualChange?: (vista: "productos" | "servicios") => void;
 }
 
 export function UnifiedSearchBar({
@@ -52,7 +55,9 @@ export function UnifiedSearchBar({
   empresaId,
   onAddToCart,
   placeholder = "Buscar productos...",
-  vistaActual = "productos"
+  vistaActual = "productos",
+  tieneServicios = false,
+  onVistaActualChange
 }: UnifiedSearchBarProps) {
   const { toast } = useToast();
   const [showFilters, setShowFilters] = useState(false);
@@ -136,8 +141,21 @@ export function UnifiedSearchBar({
     return () => clearTimeout(timeoutId);
   }, [mounted, isVoiceAvailable, setupVoiceSearch, onSearchTermChange, onAddToCart, productosVoz]);
 
+  // Local state for debounced search input
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+
+  // Sync local search term when the prop changes (e.g. from parent clearing it or voice recognition)
   useEffect(() => {
+    setLocalSearchTerm(searchTerm);
   }, [searchTerm]);
+
+  // Debounced effect to trigger the search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onSearchTermChange(localSearchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearchTerm, onSearchTermChange]);
 
   // Actualizar productos en el sistema de voz
   useEffect(() => {
@@ -228,6 +246,7 @@ export function UnifiedSearchBar({
   }, [isVoiceAvailable, isListening, startVoiceSearch, stopVoiceSearch, toast]);
 
   const handleClearSearch = () => {
+    setLocalSearchTerm("");
     onSearchTermChange("");
     if (inputRef.current) {
       inputRef.current.focus();
@@ -267,11 +286,11 @@ export function UnifiedSearchBar({
                 ref={inputRef}
                 type="text"
                 placeholder={placeholder}
-                value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
+                value={localSearchTerm}
+                onChange={(e) => setLocalSearchTerm(e.target.value)}
                 className="pl-10 pr-10 h-11 border-border dark:border-border focus:border-blue-500 focus:ring-blue-500 bg-card dark:bg-background"
               />
-              {searchTerm && (
+              {localSearchTerm && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -282,6 +301,8 @@ export function UnifiedSearchBar({
                 </Button>
               )}
             </div>
+
+            {/* El Selector de tipo (Productos / Servicios) se ha eliminado para una búsqueda general */}
 
             {/* Botón de búsqueda por voz - Solo renderizar si hay soporte */}
             {isVoiceAvailable && (
