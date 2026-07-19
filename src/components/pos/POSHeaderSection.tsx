@@ -1,8 +1,10 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Store, Users, Heart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Store, Users, Heart, Columns, LayoutGrid, ShoppingCart } from "lucide-react";
 
 interface POSHeaderSectionProps {
   nombreEmpresa: string;
@@ -11,6 +13,9 @@ interface POSHeaderSectionProps {
   esVeterinaria: boolean;
   onOpenClientDialog: () => void;
   onOpenMascotaDialog?: () => void;
+  layoutMode: "split" | "catalog" | "cart";
+  onLayoutModeChange: (mode: "split" | "catalog" | "cart") => void;
+  totalItems: number;
 }
 
 export function POSHeaderSection({
@@ -19,7 +24,10 @@ export function POSHeaderSection({
   mascotaSeleccionada,
   esVeterinaria,
   onOpenClientDialog,
-  onOpenMascotaDialog
+  onOpenMascotaDialog,
+  layoutMode,
+  onLayoutModeChange,
+  totalItems
 }: POSHeaderSectionProps) {
   return (
     <div className="mb-2">
@@ -41,14 +49,84 @@ export function POSHeaderSection({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Botón de Carrito (móvil y responsive) */}
+              <Button
+                variant={layoutMode === "cart" ? "default" : "outline"}
+                onClick={() => onLayoutModeChange(layoutMode === "cart" ? "catalog" : "cart")}
+                className="relative flex items-center gap-2 px-3 lg:hidden h-9"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center p-0 text-xs font-bold border border-background">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Botones de Layout en pantallas medianas y grandes */}
+              <div className="hidden lg:flex items-center bg-muted p-1 rounded-xl border mr-2">
+                <Button
+                  type="button"
+                  variant={layoutMode === "split" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onLayoutModeChange("split")}
+                  className={`h-8 px-3 text-xs font-semibold rounded-lg transition-all ${
+                    layoutMode === "split"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Columns className="h-3.5 w-3.5 mr-1" />
+                  Dividida
+                </Button>
+                <Button
+                  type="button"
+                  variant={layoutMode === "catalog" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onLayoutModeChange("catalog")}
+                  className={`h-8 px-3 text-xs font-semibold rounded-lg transition-all ${
+                    layoutMode === "catalog"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                  Catálogo
+                </Button>
+                <Button
+                  type="button"
+                  variant={layoutMode === "cart" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onLayoutModeChange("cart")}
+                  className={`h-8 px-3 text-xs font-semibold rounded-lg transition-all relative ${
+                    layoutMode === "cart"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+                  Carrito
+                  {totalItems > 0 && (
+                    <Badge variant="destructive" className="ml-1.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold">
+                      {totalItems}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+
               {/* Información del cliente */}
               <Button
                 variant={clienteSeleccionado ? "default" : "outline"}
                 onClick={onOpenClientDialog}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-xs sm:text-sm h-9 sm:h-10"
               >
                 <Users className="h-4 w-4" />
-                {clienteSeleccionado ? clienteSeleccionado.nombre : "Seleccionar Cliente"}
+                <span className="hidden sm:inline">
+                  {clienteSeleccionado ? clienteSeleccionado.nombre : "Seleccionar Cliente"}
+                </span>
+                <span className="sm:hidden">
+                  {clienteSeleccionado ? clienteSeleccionado.nombre.split(' ')[0] : "Cliente"}
+                </span>
               </Button>
 
               {/* Información de la mascota (veterinarias) */}
@@ -56,11 +134,16 @@ export function POSHeaderSection({
                 <Button
                   variant={mascotaSeleccionada ? "default" : "outline"}
                   onClick={onOpenMascotaDialog}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs sm:text-sm h-9 sm:h-10"
                   disabled={!clienteSeleccionado}
                 >
                   <Heart className="h-4 w-4" />
-                  {mascotaSeleccionada ? mascotaSeleccionada.nombre : "Seleccionar Mascota"}
+                  <span className="hidden sm:inline">
+                    {mascotaSeleccionada ? mascotaSeleccionada.nombre : "Seleccionar Mascota"}
+                  </span>
+                  <span className="sm:hidden">
+                    {mascotaSeleccionada ? mascotaSeleccionada.nombre : "Mascota"}
+                  </span>
                 </Button>
               )}
             </div>

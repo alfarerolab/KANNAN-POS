@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect } from "react";
@@ -43,16 +44,20 @@ interface ProductoInventario {
   stockMinimo: number;
   precio: number;
   ultimaActualizacion: string;
-  estado: "normal" | "bajo" | "agotado";
+  estado: "normal" | "bajo" | "agotado" | "riesgo";
   sku?: string;
   codigoBarras?: string;
   valorInventario: number;
+  velocidadVentas30d?: number;
+  promedioDiario?: number;
+  diasParaAgotarse?: number | null;
 }
 
 interface EstadisticasInventario {
   totalProductos: number;
   productosConStockBajo: number;
   productosAgotados: number;
+  productosEnRiesgo: number;
   valorTotalInventario: number;
   valorTotalVenta: number;
   gananciaTotal: number;
@@ -70,6 +75,7 @@ export default function InventarioPage() {
     totalProductos: 0,
     productosConStockBajo: 0,
     productosAgotados: 0,
+    productosEnRiesgo: 0,
     valorTotalInventario: 0,
     valorTotalVenta: 0,
     gananciaTotal: 0,
@@ -218,6 +224,13 @@ export default function InventarioPage() {
             Agotado
           </Badge>
         );
+      case "riesgo":
+        return (
+          <Badge variant="outline" className="bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/15">
+            <TrendingDown className="w-3 h-3 mr-1" />
+            En Riesgo
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{estado}</Badge>;
     }
@@ -305,6 +318,17 @@ export default function InventarioPage() {
           </div>
           <div className="text-xl font-bold text-foreground">{estadisticas.totalProductos}</div>
           <p className="text-[11px] text-muted-foreground">En el inventario</p>
+        </div>
+
+        <div className="px-4 lg:px-6 py-4 border-l md:border-l-0">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-muted-foreground leading-tight">En Riesgo (7d)</p>
+            <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+              <TrendingDown className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+          <div className="text-xl font-bold text-foreground">{estadisticas.productosEnRiesgo}</div>
+          <p className="text-[11px] text-muted-foreground">Se agotan pronto</p>
         </div>
 
         <div className="px-4 lg:px-6 py-4 border-l md:border-l-0">
@@ -463,6 +487,14 @@ export default function InventarioPage() {
                             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Precio</span>
                             <span className="text-sm font-semibold text-foreground">{formatCurrency(producto.precio)}</span>
                           </div>
+                          {producto.diasParaAgotarse !== undefined && producto.diasParaAgotarse !== null && (
+                            <div className="flex flex-col border-l border-border/50 pl-2">
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Predicción</span>
+                              <span className={`text-xs font-semibold ${producto.diasParaAgotarse <= 7 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                                {producto.diasParaAgotarse} {producto.diasParaAgotarse === 1 ? 'día' : 'días'}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Acciones compactas */}
@@ -523,6 +555,7 @@ export default function InventarioPage() {
                     <TableHead className="font-semibold text-foreground py-4 px-6">Stock</TableHead>
                     <TableHead className="font-semibold text-foreground py-4 px-6">Precio</TableHead>
                     <TableHead className="font-semibold text-foreground py-4 px-6">Estado</TableHead>
+                    <TableHead className="font-semibold text-foreground py-4 px-6">Predicción</TableHead>
                     <TableHead className="font-semibold text-foreground py-4 px-6">Última Actualización</TableHead>
                     <TableHead className="text-right font-semibold text-foreground py-4 px-6">Acciones</TableHead>
                   </TableRow>
@@ -605,6 +638,22 @@ export default function InventarioPage() {
                         </TableCell>
                         <TableCell className="py-4 px-6">
                           {getEstadoBadge(producto.estado, producto.stock)}
+                        </TableCell>
+                        <TableCell className="py-4 px-6">
+                          <div className="flex flex-col gap-1">
+                            {producto.diasParaAgotarse !== undefined && producto.diasParaAgotarse !== null ? (
+                              <>
+                                <span className={`text-sm font-semibold ${producto.diasParaAgotarse <= 7 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                                  {producto.diasParaAgotarse} {producto.diasParaAgotarse === 1 ? 'día' : 'días'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {producto.velocidadVentas30d} vendidos / 30d
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sin datos suficientes</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-4 px-6">
                           <div className="flex flex-col gap-1">

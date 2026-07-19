@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -26,6 +27,8 @@ interface ShoppingCartPanelProps {
   onRemoveItem: (itemId: string) => void;
   onOpenCheckout: () => void;
   onClearCart: () => void;
+  isFullWidth?: boolean;
+  onBackToCatalog?: () => void;
   onConsumoChange?: (itemId: string, consumos: ConsumoInterno[]) => void;
   empleados?: { id: string; nombre: string }[];
   initialConsumos?: Record<string, ConsumoInterno[]>;
@@ -44,7 +47,9 @@ export function ShoppingCartPanel({
   onClearCart,
   onConsumoChange,
   empleados = [],
-  initialConsumos
+  initialConsumos,
+  isFullWidth = false,
+  onBackToCatalog
 }: ShoppingCartPanelProps) {
   // Consumos internos por item de servicio
   const [consumosPorItem, setConsumosPorItem] = useState<Record<string, ConsumoInterno[]>>({});
@@ -385,23 +390,21 @@ export function ShoppingCartPanel({
           ) : (
             <div className="flex items-center gap-3">
               {/* Controles de cantidad */}
-              {!item.producto.esServicio && (
-                <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-                  <button
-                    onClick={() => onUpdateQuantity(item.id, Math.max(1, item.cantidad - 1))}
-                    className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-background transition-colors"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <span className="font-semibold text-xs min-w-[1.5rem] text-center">{item.cantidad}</span>
-                  <button
-                    onClick={() => onUpdateQuantity(item.id, item.cantidad + 1)}
-                    className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-background transition-colors"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                <button
+                  onClick={() => onUpdateQuantity(item.id, Math.max(1, item.cantidad - 1))}
+                  className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-background transition-colors"
+                >
+                  <Minus className="h-3 w-3" />
+                </button>
+                <span className="font-semibold text-xs min-w-[1.5rem] text-center">{item.cantidad}</span>
+                <button
+                  onClick={() => onUpdateQuantity(item.id, item.cantidad + 1)}
+                  className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-background transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
 
               <span className="text-xs text-muted-foreground">
                 {formatearMoneda(precioUnitario)}{unidadMedida}
@@ -680,14 +683,33 @@ export function ShoppingCartPanel({
         )}
       </AnimatePresence>
 
-      <div className="hidden xl:flex flex-col w-72 2xl:w-80 flex-shrink-0 min-h-0 h-full">
+      <div className={`flex flex-col flex-shrink-0 min-h-0 h-full transition-all duration-300 ${
+        isFullWidth 
+          ? "w-full flex-1" 
+          : "hidden xl:flex w-72 2xl:w-80"
+      }`}>
         <div className="rounded-2xl border border-border bg-card shadow-lg flex flex-col h-full overflow-hidden">
             {/* Header */}
             <div
-              className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors border-b border-border"
-              onClick={() => setIsMinimized(!isMinimized)}
+              className={`px-4 py-3 flex items-center justify-between border-b border-border ${
+                isFullWidth ? "" : "cursor-pointer hover:bg-muted/30 transition-colors"
+              }`}
+              onClick={() => !isFullWidth && setIsMinimized(!isMinimized)}
             >
               <div className="flex items-center gap-2.5">
+                {isFullWidth && onBackToCatalog && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBackToCatalog();
+                    }}
+                    className="h-8 px-2 text-xs font-semibold mr-1"
+                  >
+                    ← Catálogo
+                  </Button>
+                )}
                 <div className="p-1.5 rounded-lg bg-primary/10">
                   <ShoppingCart className="h-4 w-4 text-primary" />
                 </div>
@@ -698,13 +720,15 @@ export function ShoppingCartPanel({
                   </Badge>
                 )}
               </div>
-              <button className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                {isMinimized ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-              </button>
+              {!isFullWidth && (
+                <button className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                  {isMinimized ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                </button>
+              )}
             </div>
 
             <AnimatePresence>
-              {!isMinimized && (
+              {(isFullWidth || !isMinimized) && (
                 <motion.div
                   initial={{ height: "100%", opacity: 1 }}
                   animate={{ height: "100%", opacity: 1 }}

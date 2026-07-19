@@ -198,8 +198,30 @@ const useNavItems = (
     } // cierre del if ADMIN/GERENTE/EMPLEADO
 
     if (["ADMINISTRADOR", "GERENTE"].includes(role || "")) {
+      const childrenCaja = [
+        { href: '/dashboard/caja', title: 'Movimientos y Turnos', icon: Wallet }
+      ];
+      
+      if (role === "ADMINISTRADOR") {
+        childrenCaja.push(
+          { href: '/dashboard/cajas', title: 'Cajas Registradoras', icon: BoxesIcon },
+          { href: '/dashboard/terminales', title: 'Terminales POS', icon: MonitorIcon }
+        );
+      } else if (role === "GERENTE") {
+        childrenCaja.push(
+          { href: '/dashboard/cajas', title: 'Cajas Registradoras', icon: BoxesIcon }
+        );
+      }
+
       items.push(
-        { key: 'caja', href: '/dashboard/caja', title: 'Caja', icon: Wallet, isActive: pathname.startsWith('/dashboard/caja') },
+        { 
+          key: 'caja-group', 
+          href: '/dashboard/caja', 
+          title: 'Caja', 
+          icon: Wallet, 
+          isActive: pathname.startsWith('/dashboard/caja') || pathname.startsWith('/dashboard/cajas') || pathname.startsWith('/dashboard/terminales'),
+          children: childrenCaja
+        },
         { key: 'categorias', href: '/dashboard/categorias', title: 'Categorías', icon: TagIcon, isActive: pathname.startsWith('/dashboard/categorias') },
         { key: 'ventas', href: '/dashboard/ventas', title: 'Ventas', icon: BarChartIcon, isActive: pathname.startsWith('/dashboard/ventas') },
         { key: 'clientes', href: '/dashboard/clientes', title: 'Clientes', icon: UsersIcon, isActive: pathname.startsWith('/dashboard/clientes') },
@@ -213,8 +235,7 @@ const useNavItems = (
 
     if (role === "ADMINISTRADOR") {
       items.push(
-        { key: 'users', href: '/dashboard/usuarios', title: 'Usuarios', icon: UsersIcon, isActive: pathname.startsWith('/dashboard/usuarios') },
-        { key: 'terminales', href: '/dashboard/terminales', title: 'Terminales', icon: MonitorIcon, isActive: pathname.startsWith('/dashboard/terminales') }
+        { key: 'users', href: '/dashboard/usuarios', title: 'Usuarios', icon: UsersIcon, isActive: pathname.startsWith('/dashboard/usuarios') }
       );
 
       const configuracionCargada = configuracion != null;

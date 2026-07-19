@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState } from "react";
@@ -346,11 +347,10 @@ export function ServiceCard({
       >
         <Card
           className={cn(
-            "group cursor-pointer transition-all duration-200 hover:shadow-xl border-t-4 h-full relative overflow-hidden flex flex-col",
-            serviceConfig.borderColorClass.replace('border-', 'border-t-'),
+            "group cursor-pointer transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 border border-border/50 hover:border-indigo-500/30 h-full relative overflow-hidden flex flex-col bg-card/40 backdrop-blur-sm",
             !servicio.activo && "opacity-60 grayscale",
-            isPopular && "ring-2 ring-amber-200 border-t-amber-400",
-            isHovered && "ring-2 ring-offset-2 ring-blue-200"
+            isPopular && "border-amber-500/50 hover:border-amber-500/70 shadow-amber-500/5",
+            isHovered && "translate-y-[-4px]"
           )}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -364,11 +364,11 @@ export function ServiceCard({
             </div>
           )}
 
-          <CardContent className="p-4 h-full flex flex-col">
+          <CardContent className="p-5 h-full flex flex-col">
             {/* Header con icono y badge */}
-            <div className="flex justify-between items-start mb-3">
-              <div className={cn("w-10 h-10 rounded-full", serviceConfig.solidBg)}>
-                <IconComponent className={cn("h-5 w-5", serviceConfig.colorClass)} />
+            <div className="flex justify-between items-start mb-4">
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", serviceConfig.solidBg, "shadow-" + serviceConfig.solidBg.split('-')[1] + "/20")}>
+                <IconComponent className={cn("h-6 w-6", serviceConfig.colorClass)} />
                 {isPopular && (
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
                     <Star className="h-2 w-2 text-primary-foreground fill-white" />
@@ -376,8 +376,8 @@ export function ServiceCard({
                 )}
               </div>
 
-              <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
-                <Badge variant="outline" className={cn("text-xs", serviceConfig.bgColorClass, serviceConfig.textColorClass)}>
+              <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
+                <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold border-transparent", serviceConfig.bgColorClass, serviceConfig.textColorClass)}>
                   {serviceConfig.label}
                 </Badge>
 
@@ -390,17 +390,18 @@ export function ServiceCard({
             </div>
 
             {/* Información del servicio */}
-            <div className="flex-1 flex flex-col min-w-0">
-              <h3 className="font-semibold text-lg mb-1 line-clamp-2">{servicio.nombre}</h3>
+            <div className="flex-1 flex flex-col min-w-0 mt-2">
+              <h3 className="font-bold text-lg mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">{servicio.nombre}</h3>
 
               {servicio.descripcion && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{servicio.descripcion}</p>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">{servicio.descripcion}</p>
               )}
 
               {/* Precio y duración */}
-              <div className="mb-4">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+              <div className="mb-5 mt-auto">
+                <div className="text-2xl font-black text-foreground mb-2 flex items-baseline gap-1">
                   {formatearMoneda(servicio.precio)}
+                  <span className="text-xs text-muted-foreground font-normal">COP</span>
                 </div>
 
                 <div className="flex items-center gap-1 text-muted-foreground">
@@ -410,38 +411,38 @@ export function ServiceCard({
               </div>
 
               {/* Información adicional */}
-              <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-5 p-2.5 rounded-xl bg-background/50 border border-border/40">
                 {servicio._count?.citas && servicio._count.citas > 0 ? (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4 flex-shrink-0" />
-                    <span>{servicio._count.citas} citas</span>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                    <span>{servicio._count.citas} citas agendadas</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <Activity className="h-4 w-4 flex-shrink-0" />
-                    <span>Disponible</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Disponible hoy</span>
                   </div>
                 )}
 
                 {servicio.categoria && (
-                  <Badge variant="outline" className="text-xs">
+                  <span className="opacity-70">
                     {servicio.categoria.nombre}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </div>
 
             {/* Botones de acción */}
-            <div className="space-y-2 mt-auto">
+            <div className="space-y-2.5 mt-auto pt-4 border-t border-border/40">
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowDetailsDialog(true)}
-                  className="flex-1"
+                  className="flex-1 rounded-xl bg-background/50 hover:bg-background border-border/50"
                 >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver
+                  <Eye className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                  Ver más
                 </Button>
 
                 {onAddToCart && (
@@ -462,9 +463,10 @@ export function ServiceCard({
                 onClick={handleSelectService}
                 disabled={!servicio.activo || isSelecting}
                 className={cn(
-                  "w-full transition-all duration-200",
+                  "w-full transition-all duration-300 rounded-xl shadow-md",
                   serviceConfig.buttonBgClass,
-                  isSelecting && "scale-95"
+                  "hover:shadow-lg",
+                  isSelecting && "scale-[0.98] opacity-90"
                 )}
               >
                 <AnimatePresence mode="wait">

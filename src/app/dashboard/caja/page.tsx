@@ -1,24 +1,40 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { DollarSign, Wallet, ArrowDownRight, ArrowUpRight, Calendar, Loader2, RefreshCw } from "lucide-react";
+import {
+  Wallet, TrendingUp, Calendar as CalendarIcon, Loader2, RefreshCw,
+  Plus, Trash2, Download, Search, CheckSquare, ChevronLeft, ChevronRight,
+  ArrowUpRight, ArrowDownRight, Tag, HelpCircle, Receipt, FileText, FileSpreadsheet
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { GastoDialog } from "@/components/gastos/GastoDialog";
+import { servicioUsuarios } from "@/lib/api-service";
 
 interface CajaResumen {
-  ingresos: { efectivo: number; transferencia_tarjeta: number; total: number };
-  gastos: { efectivo: number; transferencia_tarjeta: number; total: number };
-  caja: { efectivoEsperado: number; montoInicial?: number };
+  caja: number;
+  bancolombia: number;
+  nequi: number;
+  daviplata: number;
+  tarjeta: number;
+  otro: number;
+  total: number;
+  efectivoEsperado: number;
+  montoInicial: number;
   turnoAbierto: any | null;
 }
 
@@ -27,62 +43,305 @@ export default function CajaPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [resumen, setResumen] = useState<CajaResumen | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [turnos, setTurnos] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("balance");
 
+  // --- TAB 1: BALANCE DE CAJA STATES ---
+  const [terminales, setTerminales] = useState<any[]>([]);
+  const [terminalesSeleccionados, setTerminalesSeleccionados] = useState<string[]>([]);
+  const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [cargandoBalance, setCargandoBalance] = useState(true);
+  const [resumenBalance, setResumenBalance] = useState<CajaResumen | null>(null);
+  const [movimientos, setMovimientos] = useState<any[]>([]);
+
+  // --- DETALLE DE TRANSACCION (BREAKDOWN MODAL) ---
+  const [dialogDetalleAbierto, setDialogDetalleAbierto] = useState(false);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [detalleMovimiento, setDetalleMovimiento] = useState<any | null>(null);
+
+  const verDetalleMovimiento = async (id: string, ventaId?: string) => {
+    if (id.startsWith("g-")) {
+      const gastoObj = movimientos.find(m => m.id === id);
+      setDetalleMovimiento({
+        tipoMov: "GASTO",
+        concepto: gastoObj?.cliente || "Gasto general",
+        monto: Math.abs(gastoObj?.importe || 0),
+        fecha: gastoObj?.fecha,
+        usuario: { nombre: gastoObj?.cobradoPor || "Usuario" },
+        metodoPago: gastoObj?.en || "Efectivo",
+        categoria: "General"
+      });
+      setDialogDetalleAbierto(true);
+      return;
+    }
+
+    const realVentaId = ventaId || (id.startsWith("v-") ? id.substring(2) : id.startsWith("pd-") ? id.substring(3) : id);
+    if (!realVentaId) return;
+
+    setDialogDetalleAbierto(true);
+    setCargandoDetalle(true);
+    setDetalleMovimiento(null);
+    try {
+      const res = await fetch(`/api/ventas/${realVentaId}`);
+      if (!res.ok) throw new Error("No se pudo obtener el detalle");
+      const data = await res.json();
+      setDetalleMovimiento({ ...data, tipoMov: "VENTA" });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudieron cargar los detalles de la venta", variant: "destructive" });
+      setDialogDetalleAbierto(false);
+    } finally {
+      setCargandoDetalle(false);
+    }
+  };
+
+  // Shift Management Dialogs
   const [openAbrir, setOpenAbrir] = useState(false);
   const [montoInicial, setMontoInicial] = useState(0);
   const [openCerrar, setOpenCerrar] = useState(false);
   const [montoFinalReal, setMontoFinalReal] = useState(0);
   const [notasArqueo, setNotasArqueo] = useState("");
   const [procesandoTurno, setProcesandoTurno] = useState(false);
+  const [cajas, setCajas] = useState<any[]>([]);
+  const [cajaSeleccionadaId, setCajaSeleccionadaId] = useState<string>("");
+  const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
 
+  // --- TAB 2: DETALLE DE COBROS STATES ---
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [cargandoCobros, setCargandoCobros] = useState(false);
+  const [cobros, setCobros] = useState<any[]>([]);
+  const [cobrosStats, setCobrosStats] = useState<any>({
+    cobrosCount: 0,
+    importe: 0,
+    impuestos: 0,
+    deuda: 0,
+    total: 0,
+  });
+  const [periodoCobros, setPeriodoCobros] = useState<string>("mes");
+  const [fechaDesdeCobros, setFechaDesdeCobros] = useState("");
+  const [fechaHastaCobros, setFechaHastaCobros] = useState("");
+  const [filtroEmpleadoCobros, setFiltroEmpleadoCobros] = useState("todos");
+  const [filtroCajaCobros, setFiltroCajaCobros] = useState("todos");
+  const [filtroPagoCobros, setFiltroPagoCobros] = useState("todos");
+  const [filtroEstadoCobros, setFiltroEstadoCobros] = useState("todos");
+
+  // --- TAB 3: CONTROL DE GASTOS STATES ---
+  const [cargandoGastos, setCargandoGastos] = useState(false);
+  const [gastos, setGastos] = useState<any[]>([]);
+  const [gastosStats, setGastosStats] = useState<any>({
+    gastosCount: 0,
+    total: 0,
+  });
+  const [periodoGastos, setPeriodoGastos] = useState<string>("mes");
+  const [fechaDesdeGastos, setFechaDesdeGastos] = useState("");
+  const [fechaHastaGastos, setFechaHastaGastos] = useState("");
+  const [busquedaGastos, setBusquedaGastos] = useState("");
+  const [dialogoGastoAbierto, setDialogoGastoAbierto] = useState(false);
+  const [gastoEditar, setGastoEditar] = useState<any>(null);
+
+  // Selection Checkboxes
+  const [selectedCobros, setSelectedCobros] = useState<string[]>([]);
+  const [selectedGastos, setSelectedGastos] = useState<string[]>([]);
+
+  // Permissions Check
   useEffect(() => {
     if (status === "loading") return;
     if (!session) { router.push("/iniciar-sesion"); return; }
     if (!["ADMINISTRADOR", "SUPERADMIN", "GERENTE"].includes(session.user.role as string)) {
-      toast({ title: "Sin permisos", variant: "destructive" });
+      toast({ title: "Sin permisos", description: "No tienes permisos para ver el control de caja", variant: "destructive" });
       router.push("/dashboard");
     }
   }, [session, status, router, toast]);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const res = await fetch(`/api/caja/resumen?fecha=${fecha}`);
-      if (!res.ok) throw new Error("Error al cargar resumen");
-      const data = await res.json();
-      setResumen(data.resumen);
-
-      const resTurnos = await fetch(`/api/caja/turnos`);
-      if (resTurnos.ok) {
-        const dataTurnos = await resTurnos.json();
-        setTurnos(dataTurnos.turnos || []);
-      }
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setCargando(false);
+  // General Initialization
+  useEffect(() => {
+    if (session) {
+      cargarTerminales();
+      cargarUsuarios();
+      cargarCajas();
     }
-  }, [fecha, toast]);
+  }, [session]);
 
+  const cargarTerminales = async () => {
+    try {
+      const res = await fetch("/api/terminales");
+      if (res.ok) {
+        const data = await res.json();
+        setTerminales(data || []);
+        // Select all by default
+        if (data && data.length > 0) {
+          setTerminalesSeleccionados(data.map((t: any) => t.id));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const cargarCajas = async () => {
+    try {
+      const res = await fetch("/api/cajas");
+      if (res.ok) {
+        const data = await res.json();
+        const activas = data.filter((c: any) => c.activa);
+        setCajas(activas || []);
+        if (activas && activas.length > 0) {
+          setCajaSeleccionadaId(activas[0].id);
+          setCajasSeleccionadas([activas[0].id]);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const cargarUsuarios = async () => {
+    try {
+      const data = await servicioUsuarios.obtenerUsuarios({ limite: 100 });
+      const lista = data.datos || data.usuarios || data;
+      setUsuarios(Array.isArray(lista) ? lista : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Helper date parsing
+  const calcularRangoFechas = (periodo: string, desdeInput: string, hastaInput: string) => {
+    const ahora = new Date();
+    let desde = new Date();
+    let hasta = new Date();
+
+    if (periodo === "hoy") {
+      desde = startOfDay(ahora);
+      hasta = endOfDay(ahora);
+    } else if (periodo === "semana") {
+      desde = startOfWeek(ahora, { weekStartsOn: 1 });
+      hasta = endOfWeek(ahora, { weekStartsOn: 1 });
+    } else if (periodo === "mes") {
+      desde = startOfMonth(ahora);
+      hasta = endOfMonth(ahora);
+    } else if (periodo === "anio") {
+      desde = new Date(ahora.getFullYear(), 0, 1);
+      hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (periodo === "personalizado") {
+      desde = desdeInput ? new Date(`${desdeInput}T00:00:00-05:00`) : startOfMonth(ahora);
+      hasta = hastaInput ? new Date(`${hastaInput}T23:59:59.999-05:00`) : endOfMonth(ahora);
+    }
+    return { desde, hasta };
+  };
+
+  // --- LOADER ACTIONS ---
+
+  // Load Balance & Daily Movements
+  const cargarBalance = useCallback(async () => {
+    if (!session) return;
+    setCargandoBalance(true);
+    try {
+      const activeIds = cajasSeleccionadas.length > 0 ? cajasSeleccionadas.join(",") : "all";
+      const res = await fetch(`/api/caja/movimientos?fecha=${fecha}&cajas=${activeIds}`);
+      if (!res.ok) throw new Error("Error al obtener los movimientos");
+      const data = await res.json();
+      setResumenBalance(data.resumen);
+      setMovimientos(data.movimientos || []);
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "No se pudo cargar el balance", variant: "destructive" });
+    } finally {
+      setCargandoBalance(false);
+    }
+  }, [fecha, cajasSeleccionadas, session, toast]);
+
+  // Load Charge Logs
+  const cargarCobrosLogs = useCallback(async () => {
+    if (!session) return;
+    setCargandoCobros(true);
+    try {
+      const { desde, hasta } = calcularRangoFechas(periodoCobros, fechaDesdeCobros, fechaHastaCobros);
+      const params = new URLSearchParams({
+        desde: desde.toISOString(),
+        hasta: hasta.toISOString(),
+        usuarioId: filtroEmpleadoCobros,
+        cajaId: filtroCajaCobros,
+        metodoPago: filtroPagoCobros,
+        estadoPago: filtroEstadoCobros,
+      });
+
+      const res = await fetch(`/api/caja/cobros-detalle?${params}`);
+      if (!res.ok) throw new Error("Error al obtener los cobros");
+      const data = await res.json();
+      setCobrosStats(data.estadisticas);
+      setCobros(data.cobros || []);
+      setSelectedCobros([]);
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "No se pudieron cargar los cobros", variant: "destructive" });
+    } finally {
+      setCargandoCobros(false);
+    }
+  }, [periodoCobros, fechaDesdeCobros, fechaHastaCobros, filtroEmpleadoCobros, filtroCajaCobros, filtroPagoCobros, filtroEstadoCobros, session, toast]);
+
+  // Load Expenses
+  const cargarGastosLogs = useCallback(async () => {
+    if (!session) return;
+    setCargandoGastos(true);
+    try {
+      const { desde, hasta } = calcularRangoFechas(periodoGastos, fechaDesdeGastos, fechaHastaGastos);
+      const params = new URLSearchParams({
+        desde: desde.toISOString(),
+        hasta: hasta.toISOString(),
+      });
+
+      const res = await fetch(`/api/gastos?${params}`);
+      if (!res.ok) throw new Error("Error al cargar los gastos");
+      const data = await res.json();
+      setGastos(data.gastos || []);
+      
+      const total = (data.gastos || []).reduce((acc: number, curr: any) => acc + curr.monto, 0);
+      setGastosStats({
+        gastosCount: (data.gastos || []).length,
+        total,
+      });
+      setSelectedGastos([]);
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "No se pudieron cargar los gastos", variant: "destructive" });
+    } finally {
+      setCargandoGastos(false);
+    }
+  }, [periodoGastos, fechaDesdeGastos, fechaHastaGastos, session, toast]);
+
+  // Trigger loads based on active tab
+  useEffect(() => {
+    if (session) {
+      if (activeTab === "balance") {
+        cargarBalance();
+      } else if (activeTab === "cobros") {
+        cargarCobrosLogs();
+      } else if (activeTab === "gastos") {
+        cargarGastosLogs();
+      }
+    }
+  }, [activeTab, cargarBalance, cargarCobrosLogs, cargarGastosLogs, session]);
+
+  // Refresh balance when terminals change or date changes
+  useEffect(() => {
+    if (session && activeTab === "balance") {
+      cargarBalance();
+    }
+  }, [fecha, terminalesSeleccionados, activeTab]);
+
+  // --- HANDLERS FOR DRAWER TURNS ---
   const handleAbrirCaja = async () => {
     setProcesandoTurno(true);
     try {
       const res = await fetch("/api/caja/turnos/abrir", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ montoInicial })
+        body: JSON.stringify({ montoInicial, cajaId: cajaSeleccionadaId })
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "No se pudo abrir la caja");
+        const err = await res.json();
+        throw new Error(err.error || "No se pudo abrir la caja");
       }
       toast({ title: "Caja abierta correctamente" });
       setOpenAbrir(false);
-      cargar();
+      cargarBalance();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -96,17 +355,21 @@ export default function CajaPage() {
       const res = await fetch("/api/caja/turnos/cerrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ montoFinalReal, notas: notasArqueo })
+        body: JSON.stringify({ 
+          montoFinalReal, 
+          notas: notasArqueo,
+          cajaId: resumenBalance?.turnoAbierto?.cajaId || (cajasSeleccionadas.length === 1 ? cajasSeleccionadas[0] : undefined)
+        })
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "No se pudo cerrar la caja");
+        const err = await res.json();
+        throw new Error(err.error || "No se pudo cerrar la caja");
       }
-      toast({ title: "Arqueo realizado correctamente" });
+      toast({ title: "Arqueo y cierre de caja realizados correctamente" });
       setOpenCerrar(false);
       setMontoFinalReal(0);
       setNotasArqueo("");
-      cargar();
+      cargarBalance();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -114,278 +377,952 @@ export default function CajaPage() {
     }
   };
 
-  useEffect(() => {
-    if (session) cargar();
-  }, [cargar, session]);
+  // --- ELIMINAR GASTO ---
+  const handleEliminarGasto = async (id: string) => {
+    if (!confirm("¿Estás seguro de eliminar este gasto?")) return;
+    try {
+      const res = await fetch(`/api/gastos/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Error al eliminar");
+      toast({ title: "Gasto eliminado correctamente" });
+      cargarGastosLogs();
+      if (fecha === format(new Date(), "yyyy-MM-dd")) {
+        cargarBalance();
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "No se pudo eliminar", variant: "destructive" });
+    }
+  };
 
+  // --- EXPORT TO CSV CLIENT SIDE ---
+  const handleExportarCobros = () => {
+    const dataToExport = selectedCobros.length > 0 
+      ? cobros.filter(c => selectedCobros.includes(c.id))
+      : cobros;
+
+    if (dataToExport.length === 0) {
+      toast({ title: "Sin datos", description: "No hay registros de cobros para exportar", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Fecha", "Cliente", "Cobrador", "Caja", "Factura", "Forma de Pago", "Importe", "Impuesto", "Total"];
+    let csvContent = "\uFEFF" + headers.join(",") + "\n";
+
+    dataToExport.forEach(c => {
+      const row = [
+        format(new Date(c.fecha), "dd/MM/yyyy HH:mm"),
+        `"${c.cliente.replace(/"/g, '""')}"`,
+        `"${c.cobrador.replace(/"/g, '""')}"`,
+        `"${c.caja.replace(/"/g, '""')}"`,
+        `"${c.factura}"`,
+        `"${c.formaPago}"`,
+        c.importe,
+        c.impuesto,
+        c.total
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `reporte_cobros_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportarGastos = () => {
+    const dataToExport = selectedGastos.length > 0 
+      ? gastos.filter(g => selectedGastos.includes(g.id))
+      : gastos;
+
+    if (dataToExport.length === 0) {
+      toast({ title: "Sin datos", description: "No hay registros de gastos para exportar", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Fecha", "Concepto", "Categoría", "Método Pago", "Importe"];
+    let csvContent = "\uFEFF" + headers.join(",") + "\n";
+
+    dataToExport.forEach(g => {
+      const row = [
+        format(new Date(g.fecha), "dd/MM/yyyy"),
+        `"${g.concepto.replace(/"/g, '""')}"`,
+        `"${g.categoria.nombre.replace(/"/g, '""')}"`,
+        `"${g.metodoPago || "Efectivo"}"`,
+        g.monto
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `reporte_gastos_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Currency Formatter
   const formatMoneda = (v: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);
 
   const esHoy = fecha === format(new Date(), "yyyy-MM-dd");
 
+  const toggleTerminal = (id: string) => {
+    if (terminalesSeleccionados.includes(id)) {
+      setTerminalesSeleccionados(terminalesSeleccionados.filter(t => t !== id));
+    } else {
+      setTerminalesSeleccionados([...terminalesSeleccionados, id]);
+    }
+  };
+
+  const seleccionarCaja = (id: string) => {
+    setCajaSeleccionadaId(id);
+    setCajasSeleccionadas([id]);
+  };
+
+  const shiftDay = (days: number) => {
+    const d = new Date(fecha + "T00:00:00");
+    const updated = addDays(d, days);
+    setFecha(format(updated, "yyyy-MM-dd"));
+  };
+
+  // Expense matching filters
+  const gastosFiltrados = gastos.filter(g => 
+    busquedaGastos 
+      ? g.concepto.toLowerCase().includes(busquedaGastos.toLowerCase()) || 
+        g.categoria?.nombre.toLowerCase().includes(busquedaGastos.toLowerCase())
+      : true
+  );
+
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Caja y Flujo de Efectivo</h1>
-          <p className="text-base text-muted-foreground">
-            Control de ingresos, gastos y efectivo disponible.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-44 h-9"
-            />
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-10">
+      
+      {/* Dynamic Main Header Banner */}
+      <div className="relative px-6 lg:px-8 pt-6 pb-5 border-b border-border/60">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/40 rounded-t-2xl" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Control y Reportes de Caja</h1>
+              {cajas.find(c => cajasSeleccionadas.includes(c.id)) && (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs py-1 px-3 rounded-full font-bold shadow-sm">
+                  Caja Activa: {cajas.find(c => cajasSeleccionadas.includes(c.id))?.nombre}
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Supervisión de balances diarios, arqueos, cobros y registro de egresos operativos.
+            </p>
           </div>
-          <Button size="sm" variant="outline" onClick={cargar} disabled={cargando} className="h-9 w-9 p-0">
-            <RefreshCw className={`h-4 w-4 ${cargando ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => {
+              if (activeTab === "balance") cargarBalance();
+              else if (activeTab === "cobros") cargarCobrosLogs();
+              else if (activeTab === "gastos") cargarGastosLogs();
+            }} className="h-10 w-10 p-0">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Indicador de fecha */}
-      {esHoy && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4 py-3 bg-card border border-border rounded-xl shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <span className={`inline-block w-2.5 h-2.5 rounded-full ${resumen?.turnoAbierto ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-            {resumen?.turnoAbierto ? (
-              <span>Turno actual abierto — <strong className="text-emerald-600 dark:text-emerald-400">Base: {formatMoneda(resumen.caja.montoInicial || 0)}</strong></span>
-            ) : (
-              <span className="text-amber-600 dark:text-amber-400">La caja del día está cerrada o no se ha abierto</span>
-            )}
-            <span className="hidden sm:inline mx-2 text-muted-foreground">|</span>
-            <span className="text-muted-foreground">{format(new Date(), "EEEE d 'de' MMMM yyyy", { locale: es })}</span>
+      {/* Main Tabs Container */}
+      <Tabs defaultValue="balance" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="border-b border-border/60 pb-1 mb-6">
+          <TabsList className="bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="balance" className="rounded-lg px-4 py-2 text-sm font-medium">
+              Balance de Caja
+            </TabsTrigger>
+            <TabsTrigger value="cobros" className="rounded-lg px-4 py-2 text-sm font-medium">
+              Detalle de Cobros
+            </TabsTrigger>
+            <TabsTrigger value="gastos" className="rounded-lg px-4 py-2 text-sm font-medium">
+              Gastos
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* TAB 1: BALANCE DE CAJA & ARQUEO */}
+        {/* ========================================================================= */}
+        <TabsContent value="balance" className="space-y-6 outline-none">
+          
+          {/* Box/Terminal Selection Checkboxes & Date Control */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start bg-card/40 border border-border/80 rounded-2xl p-5 shadow-sm">
+            
+            <div className="lg:col-span-3 space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                💼 Seleccionar Caja Registradora:
+              </span>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {/* Lista de cajas en forma de píldoras de selección única */}
+                {cajas.map((c) => {
+                  const isSelected = cajasSeleccionadas.includes(c.id);
+                  return (
+                    <Button
+                      key={c.id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => seleccionarCaja(c.id)}
+                      className={`rounded-full px-5 py-2 text-xs font-semibold transition-all shadow-sm ${
+                        isSelected 
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20" 
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <span className="mr-1.5">{isSelected ? "✅" : "💵"}</span>
+                      {c.nombre}
+                    </Button>
+                  );
+                })}
+                {cajas.length === 0 && (
+                  <span className="text-sm text-muted-foreground">Cargando cajas...</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 w-full lg:w-auto">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fecha de Consulta:</span>
+              <div className="flex items-center gap-1.5 w-full">
+                <Button variant="outline" size="icon" onClick={() => shiftDay(-1)} className="h-10 w-10">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="relative flex-1">
+                  <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="pl-9 h-10 w-full"
+                  />
+                </div>
+                <Button variant="outline" size="icon" onClick={() => shiftDay(1)} className="h-10 w-10">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
           </div>
-          <div>
-            {!cargando && resumen && (
-              resumen.turnoAbierto ? (
-                <Button variant="destructive" onClick={() => setOpenCerrar(true)} className="h-9 px-4">
+
+          {/* Turn Drawer State Warning Banner */}
+          {esHoy && resumenBalance && (
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-6 py-4 bg-muted/30 border border-border/80 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className={`inline-block w-3 h-3 rounded-full ${resumenBalance.turnoAbierto ? "bg-emerald-500 animate-pulse" : "bg-sky-500"}`} />
+                <div className="text-sm">
+                  {resumenBalance.turnoAbierto ? (
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+                      Caja "{cajas.find(c => c.id === resumenBalance.turnoAbierto.cajaId)?.nombre || "Principal"}" Abierta — Base inicial: {formatMoneda(resumenBalance.montoInicial)}
+                    </p>
+                  ) : (
+                    <p className="font-semibold text-sky-800 dark:text-sky-300">
+                      {cajasSeleccionadas.length === 1 
+                        ? `Caja "${cajas.find(c => c.id === cajasSeleccionadas[0])?.nombre || "seleccionada"}" en Registro Automático (Base: $0)` 
+                        : "Cajas en Registro Automático (Base: $0)"}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(`${fecha}T00:00:00`), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    if (cajasSeleccionadas.length === 1) {
+                      setCajaSeleccionadaId(cajasSeleccionadas[0]);
+                    }
+                    setOpenCerrar(true);
+                  }} 
+                  className="h-10 px-5 shadow-sm font-semibold"
+                >
                   Cerrar Caja (Arqueo)
                 </Button>
-              ) : (
-                <Button onClick={() => setOpenAbrir(true)} className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Abrir Caja
-                </Button>
-              )
-            )}
-          </div>
-        </div>
-      )}
-
-      {cargando ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : resumen ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Ingresos Totales */}
-          <Card className="border-border shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Ingresos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatMoneda(resumen.ingresos.total)}
-                </span>
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <ArrowUpRight className="h-6 w-6 text-emerald-600" />
-                </div>
+                
+                {!resumenBalance.turnoAbierto && (
+                  <Button 
+                    onClick={() => {
+                      if (cajasSeleccionadas.length === 1) {
+                        setCajaSeleccionadaId(cajasSeleccionadas[0]);
+                      }
+                      setOpenAbrir(true);
+                    }} 
+                    variant="outline"
+                    className="h-10 px-5 border-primary/40 text-primary hover:bg-primary/10 shadow-sm font-semibold"
+                  >
+                    Establecer Base Manual
+                  </Button>
+                )}
               </div>
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Efectivo:</span>
-                  <span className="font-medium text-foreground">{formatMoneda(resumen.ingresos.efectivo)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Digital:</span>
-                  <span className="font-medium text-foreground">{formatMoneda(resumen.ingresos.transferencia_tarjeta)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Gastos Totales */}
-          <Card className="border-border shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Salidas / Gastos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold text-rose-600 dark:text-rose-400">
-                  {formatMoneda(resumen.gastos.total)}
-                </span>
-                <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center">
-                  <ArrowDownRight className="h-6 w-6 text-rose-600" />
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Efectivo:</span>
-                  <span className="font-medium text-foreground">{formatMoneda(resumen.gastos.efectivo)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Digital:</span>
-                  <span className="font-medium text-foreground">{formatMoneda(resumen.gastos.transferencia_tarjeta)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Efectivo Físico en Caja */}
-          <Card className="border-border shadow-md bg-gradient-to-br from-primary/5 to-purple-500/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Wallet className="h-24 w-24" />
             </div>
-            <CardHeader className="pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-primary flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Efectivo en Caja
-              </CardTitle>
-              <CardDescription>Dinero físico que debe haber en caja</CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="mt-2">
-                <span className="text-4xl font-extrabold text-foreground">
-                  {formatMoneda(resumen.caja.efectivoEsperado)}
-                </span>
-              </div>
-              <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
-                <div className="flex justify-between">
-                  <span>+ Ingresos Efectivo:</span>
-                  <span className="text-emerald-600 font-medium">{formatMoneda(resumen.ingresos.efectivo)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>- Salidas Efectivo:</span>
-                  <span className="text-rose-600 font-medium">{formatMoneda(resumen.gastos.efectivo)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
+          )}
 
-      {/* Historial de Turnos */}
-      {turnos.length > 0 && (
-        <Card className="mt-8 border-border shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Historial de Turnos y Arqueos</CardTitle>
-            <CardDescription>Últimas cajas registradas en el sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha Apertura</TableHead>
-                  <TableHead>Fecha Cierre</TableHead>
-                  <TableHead>Monto Inicial</TableHead>
-                  <TableHead>Monto Esperado</TableHead>
-                  <TableHead>Monto Real</TableHead>
-                  <TableHead>Diferencia</TableHead>
-                  <TableHead>Usuario</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {turnos.map((turno) => (
-                  <TableRow key={turno.id}>
-                    <TableCell className="py-3 text-xs">{format(new Date(turno.abiertaEn), "dd/MM/yy HH:mm")}</TableCell>
-                    <TableCell className="py-3 text-xs">
-                      {turno.cerradaEn ? format(new Date(turno.cerradaEn), "dd/MM/yy HH:mm") : <Badge variant="secondary">Abierto</Badge>}
-                    </TableCell>
-                    <TableCell className="py-3 font-medium text-xs">{formatMoneda(Number(turno.montoInicial || 0))}</TableCell>
-                    <TableCell className="py-3 text-xs">{turno.montoFinalEsperado !== null ? formatMoneda(Number(turno.montoFinalEsperado)) : "-"}</TableCell>
-                    <TableCell className="py-3 font-medium text-xs">{turno.montoFinalReal !== null ? formatMoneda(Number(turno.montoFinalReal)) : "-"}</TableCell>
-                    <TableCell className="py-3 text-xs">
-                      {turno.diferencia !== null ? (
-                        <span className={Number(turno.diferencia) < 0 ? "text-rose-600 font-bold" : Number(turno.diferencia) > 0 ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
-                          {formatMoneda(Number(turno.diferencia))}
-                        </span>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell className="py-3 text-xs">{turno.usuario?.nombre || "-"}</TableCell>
+          {/* Tab 1 Balance Cards */}
+          {cargandoBalance ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : resumenBalance ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              
+              <Card className="shadow-sm border-border bg-card/60">
+                <CardHeader className="pb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CAJA (Efectivo)</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-extrabold text-foreground">{formatMoneda(resumenBalance.caja)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border bg-card/60">
+                <CardHeader className="pb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">BANCOLOMBIA</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{formatMoneda(resumenBalance.bancolombia)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border bg-card/60">
+                <CardHeader className="pb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">NEQUI</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-extrabold text-purple-600 dark:text-purple-400">{formatMoneda(resumenBalance.nequi)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border bg-card/60">
+                <CardHeader className="pb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DAVIPLATA</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{formatMoneda(resumenBalance.daviplata)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border/80 bg-primary/5 border-l-4 border-l-primary lg:col-span-1 sm:col-span-2">
+                <CardHeader className="pb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">TOTAL</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-black text-primary">{formatMoneda(resumenBalance.total)}</p>
+                </CardContent>
+              </Card>
+
+            </div>
+          ) : null}
+
+          {/* Movimientos del día */}
+          <div className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border/80">
+              <h3 className="font-bold text-foreground">Movimientos y facturación del día</h3>
+              <p className="text-xs text-muted-foreground">Listado cronológico de cobros y gastos del día seleccionado</p>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="font-semibold py-3 px-6">FECHA</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">CLIENTE / CONCEPTO</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">COBRADO POR</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">TIPO</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">EN</TableHead>
+                    <TableHead className="font-semibold py-3 px-6 text-right">IMPORTE</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                </TableHeader>
+                <TableBody>
+                  {cargandoBalance ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Cargando...</TableCell>
+                    </TableRow>
+                  ) : movimientos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        <Wallet className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                        No se registran movimientos para el día seleccionado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movimientos.map((m) => (
+                      <TableRow 
+                        key={m.id} 
+                        className="hover:bg-muted/10 transition-colors cursor-pointer"
+                        onClick={() => verDetalleMovimiento(m.id, m.ventaId)}
+                      >
+                        <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap">
+                          {format(new Date(m.fecha), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 font-semibold text-foreground">
+                          {m.cliente}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground whitespace-nowrap">
+                          {m.cobradoPor}
+                        </TableCell>
+                        <TableCell className="py-4 px-6">
+                          <Badge variant={m.tipo.includes("Cobro") ? "default" : "destructive"} className="text-xs font-semibold px-2 py-0.5">
+                            {m.tipo}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm font-medium text-muted-foreground">
+                          {m.en}
+                        </TableCell>
+                        <TableCell className={`py-4 px-6 text-right font-bold text-sm whitespace-nowrap ${m.importe > 0 ? "text-green-600 dark:text-green-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          {formatMoneda(m.importe)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
 
+        </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* TAB 2: DETALLE DE COBROS */}
+        {/* ========================================================================= */}
+        <TabsContent value="cobros" className="space-y-6 outline-none">
+          
+          {/* Advanced Filter Box */}
+          <div className="bg-card/40 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
+            
+            {/* Period selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">Período:</span>
+              <div className="flex gap-1 bg-muted p-1 rounded-xl">
+                {["hoy", "semana", "mes", "anio", "personalizado"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriodoCobros(p)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${
+                      periodoCobros === p 
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {p === "anio" ? "Año" : p}
+                  </button>
+                ))}
+              </div>
+
+              {periodoCobros === "personalizado" && (
+                <div className="flex items-center gap-2 ml-2">
+                  <Input type="date" value={fechaDesdeCobros} onChange={(e) => setFechaDesdeCobros(e.target.value)} className="w-36 h-9 text-xs" />
+                  <span className="text-muted-foreground text-xs">—</span>
+                  <Input type="date" value={fechaHastaCobros} onChange={(e) => setFechaHastaCobros(e.target.value)} className="w-36 h-9 text-xs" />
+                  <Button size="sm" onClick={cargarCobrosLogs} className="h-9 px-3">Aplicar</Button>
+                </div>
+              )}
+            </div>
+
+            {/* Dropdown Filters row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Empleados</span>
+                <Select value={filtroEmpleadoCobros} onValueChange={setFiltroEmpleadoCobros}>
+                  <SelectTrigger className="h-10 bg-card">
+                    <SelectValue placeholder="Cualquier cajero" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Cualquier cajero</SelectItem>
+                    {usuarios.map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Caja Registradora</span>
+                <Select value={filtroCajaCobros} onValueChange={setFiltroCajaCobros}>
+                  <SelectTrigger className="h-10 bg-card">
+                    <SelectValue placeholder="Cualquier caja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Cualquier caja</SelectItem>
+                    {cajas.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Forma de Pago</span>
+                <Select value={filtroPagoCobros} onValueChange={setFiltroPagoCobros}>
+                  <SelectTrigger className="h-10 bg-card">
+                    <SelectValue placeholder="Cualquier forma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Cualquier forma</SelectItem>
+                    <SelectItem value="EFECTIVO">Efectivo</SelectItem>
+                    <SelectItem value="BANCOLOMBIA">Bancolombia</SelectItem>
+                    <SelectItem value="NEQUI">Nequi</SelectItem>
+                    <SelectItem value="DAVIPLATA">Daviplata</SelectItem>
+                    <SelectItem value="TARJETA">Tarjeta</SelectItem>
+                    <SelectItem value="FIADO">Fiado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Estado de Venta</span>
+                <Select value={filtroEstadoCobros} onValueChange={setFiltroEstadoCobros}>
+                  <SelectTrigger className="h-10 bg-card">
+                    <SelectValue placeholder="Cualquier opción" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Cualquier opción</SelectItem>
+                    <SelectItem value="PAGADO">Cobrado (Contado)</SelectItem>
+                    <SelectItem value="DEUDA">Por Cobrar (Fiado)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={cargarCobrosLogs} className="h-10 px-6 font-semibold flex items-center gap-2">
+                <Search className="h-4 w-4" /> Buscar Cobros
+              </Button>
+            </div>
+
+          </div>
+
+          {/* Metric cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            
+            <Card className="shadow-sm border-border bg-card/60">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">COBROS</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-black text-foreground">{cobrosStats.cobrosCount}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border bg-card/60">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">IMPORTE (Subtotal)</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-extrabold text-foreground">{formatMoneda(cobrosStats.importe)}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border bg-card/60">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">IMPUESTOS</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-extrabold text-foreground">{formatMoneda(cobrosStats.impuestos)}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border bg-card/60">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-rose-500">DEUDA (Pendiente)</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-extrabold text-rose-500">{formatMoneda(cobrosStats.deuda)}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-l-emerald-500">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">TOTAL COBRADO</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{formatMoneda(cobrosStats.total)}</p>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* Table list */}
+          <div className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h3 className="font-bold text-foreground">Listado de Cobros</h3>
+                <p className="text-xs text-muted-foreground">Detalle individual de pagos recibidos en el período</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleExportarCobros} className="h-9 text-xs flex items-center gap-2 border-border/80">
+                  <Download className="h-3.5 w-3.5" /> Descargar CSV
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="w-12 py-3 px-6">
+                      <Checkbox
+                        checked={cobros.length > 0 && selectedCobros.length === cobros.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedCobros(cobros.map(c => c.id));
+                          else setSelectedCobros([]);
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead className="font-semibold py-3 px-6">FECHA COBRO</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">CLIENTE</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">COBRADOR</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">CAJA</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">FACTURA</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">FORMA DE PAGO</TableHead>
+                    <TableHead className="font-semibold py-3 px-6 text-right">TOTAL</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cargandoCobros ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Cargando...</TableCell>
+                    </TableRow>
+                  ) : cobros.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                        No hay cobros registrados en el período con los filtros aplicados
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    cobros.map((c) => (
+                      <TableRow key={c.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="py-4 px-6">
+                          <Checkbox
+                            checked={selectedCobros.includes(c.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedCobros([...selectedCobros, c.id]);
+                              else setSelectedCobros(selectedCobros.filter(id => id !== c.id));
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {format(new Date(c.fecha), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 font-semibold text-foreground cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {c.cliente}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {c.cobrador}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {c.caja}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {c.factura}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          <Badge variant="outline" className="font-medium">{c.formaPago}</Badge>
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-right font-bold text-foreground whitespace-nowrap cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
+                          {formatMoneda(c.total)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+        </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* TAB 3: CONTROL DE GASTOS */}
+        {/* ========================================================================= */}
+        <TabsContent value="gastos" className="space-y-6 outline-none">
+          
+          {/* Expenses Filter Box */}
+          <div className="bg-card/40 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
+            
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">Período:</span>
+                <div className="flex gap-1 bg-muted p-1 rounded-xl">
+                  {["hoy", "semana", "mes", "anio", "personalizado"].map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPeriodoGastos(p)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${
+                        periodoGastos === p 
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {p === "anio" ? "Año" : p}
+                    </button>
+                  ))}
+                </div>
+
+                {periodoGastos === "personalizado" && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <Input type="date" value={fechaDesdeGastos} onChange={(e) => setFechaDesdeGastos(e.target.value)} className="w-36 h-9 text-xs" />
+                    <span className="text-muted-foreground text-xs">—</span>
+                    <Input type="date" value={fechaHastaGastos} onChange={(e) => setFechaHastaGastos(e.target.value)} className="w-36 h-9 text-xs" />
+                    <Button size="sm" onClick={cargarGastosLogs} className="h-9 px-3">Aplicar</Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button onClick={() => { setGastoEditar(null); setDialogoGastoAbierto(true); }} className="h-10 px-5 bg-primary hover:bg-primary/90 text-white font-semibold flex items-center gap-2 shadow-sm">
+                  <Plus className="h-4 w-4" /> Nuevo Gasto
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar gasto por concepto o categoría..."
+                value={busquedaGastos}
+                onChange={(e) => setBusquedaGastos(e.target.value)}
+                className="pl-9 h-10 w-full bg-card"
+              />
+            </div>
+
+          </div>
+
+          {/* Metric cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <Card className="shadow-sm border-border bg-card/60">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">GASTOS</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-black text-foreground">{gastosStats.gastosCount}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border bg-rose-50 dark:bg-rose-950/20 border-l-4 border-l-rose-500">
+              <CardHeader className="pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">TOTAL GASTADO</span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{formatMoneda(gastosStats.total)}</p>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* Table List */}
+          <div className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h3 className="font-bold text-foreground">Resumen de Gastos</h3>
+                <p className="text-xs text-muted-foreground">Listado de egresos operativos documentados en el período</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleExportarGastos} className="h-9 text-xs flex items-center gap-2 border-border/80">
+                  <Download className="h-3.5 w-3.5" /> Descargar CSV
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="w-12 py-3 px-6">
+                      <Checkbox
+                        checked={gastos.length > 0 && selectedGastos.length === gastos.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedGastos(gastos.map(g => g.id));
+                          else setSelectedGastos([]);
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead className="font-semibold py-3 px-6">FECHA</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">CONCEPTO (REGISTRO)</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">CATEGORÍA</TableHead>
+                    <TableHead className="font-semibold py-3 px-6">MÉTODO PAGO</TableHead>
+                    <TableHead className="font-semibold py-3 px-6 text-right">IMPORTE</TableHead>
+                    <TableHead className="font-semibold py-3 px-6 text-center">ACCIONES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cargandoGastos ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Cargando...</TableCell>
+                    </TableRow>
+                  ) : gastosFiltrados.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                        No hay gastos registrados en el período
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    gastosFiltrados.map((g) => (
+                      <TableRow key={g.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="py-4 px-6">
+                          <Checkbox
+                            checked={selectedGastos.includes(g.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedGastos([...selectedGastos, g.id]);
+                              else setSelectedGastos(selectedGastos.filter(id => id !== g.id));
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap">
+                          {format(new Date(g.fecha), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 font-semibold text-foreground">
+                          {g.concepto}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground">
+                          <Badge variant="secondary" className="px-2 py-0.5">{g.categoria?.nombre || "General"}</Badge>
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-sm text-muted-foreground">
+                          {g.metodoPago || "EFECTIVO"}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                          {formatMoneda(g.monto)}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEliminarGasto(g.id)}
+                            className="h-8 w-8 text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+        </TabsContent>
+      </Tabs>
+
+      {/* ========================================================================= */}
+      {/* SHIFT OPEN/CLOSE DIALOGS */}
+      {/* ========================================================================= */}
+      
+      {/* Dialog: Abrir Caja */}
       <Dialog open={openAbrir} onOpenChange={setOpenAbrir}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Abrir Caja</DialogTitle>
+            <DialogTitle>Abrir Caja del Día</DialogTitle>
             <DialogDescription>
-              Registra el monto inicial (base) con el que vas a abrir la caja hoy.
+              Registra el monto de base en efectivo con el que inicias el turno.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Efectivo Inicial en Caja</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="number"
-                  value={montoInicial || ''}
-                  onChange={(e) => setMontoInicial(Number(e.target.value))}
-                  className="pl-9"
-                  placeholder="0"
-                />
-              </div>
+              <label className="text-sm font-semibold">Caja Registradora *</label>
+              <Select value={cajaSeleccionadaId} onValueChange={setCajaSeleccionadaId}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecciona una caja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cajas.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Monto Inicial (Base en efectivo) *</label>
+              <Input
+                type="number"
+                value={montoInicial}
+                onChange={(e) => setMontoInicial(Number(e.target.value))}
+                placeholder="Ej. 100000"
+                className="h-11 font-bold text-lg"
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenAbrir(false)} disabled={procesandoTurno}>
               Cancelar
             </Button>
-            <Button onClick={handleAbrirCaja} disabled={procesandoTurno || montoInicial < 0} className="bg-emerald-600 hover:bg-emerald-700">
-              {procesandoTurno && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmar Apertura
+            <Button onClick={handleAbrirCaja} disabled={procesandoTurno} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+              {procesandoTurno ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Abrir Caja
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Dialog: Cerrar Caja (Arqueo) */}
       <Dialog open={openCerrar} onOpenChange={setOpenCerrar}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Cerrar Caja (Arqueo)</DialogTitle>
+            <DialogTitle>Arqueo y Cierre de Caja</DialogTitle>
             <DialogDescription>
-              Cuenta el efectivo físico que hay en la caja registradora e ingrésalo aquí.
-              El sistema comparará con el Efectivo Esperado ({resumen ? formatMoneda(resumen.caja.efectivoEsperado) : "$0"}).
+              Compara el saldo físico en efectivo con el saldo del sistema.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-rose-600 dark:text-rose-400">Efectivo Físico Real (Contado)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="number"
-                  value={montoFinalReal || ''}
-                  onChange={(e) => setMontoFinalReal(Number(e.target.value))}
-                  className="pl-9 font-bold border-rose-200 dark:border-rose-900 focus-visible:ring-rose-500"
-                  placeholder="0"
-                />
+            {resumenBalance && (
+              <div className="bg-muted p-4 rounded-xl space-y-2 text-sm border">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto Inicial (Base):</span>
+                  <span className="font-semibold">{formatMoneda(resumenBalance.montoInicial)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ingresos en Efectivo:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">+{formatMoneda(resumenBalance.caja)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gastos en Efectivo:</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">-{formatMoneda(resumenBalance.efectivoEsperado - resumenBalance.montoInicial - resumenBalance.caja)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 font-bold text-base">
+                  <span>Efectivo Esperado:</span>
+                  <span className="text-primary">{formatMoneda(resumenBalance.efectivoEsperado)}</span>
+                </div>
               </div>
-              {montoFinalReal > 0 && resumen && (
-                <p className={`text-xs mt-1 ${montoFinalReal - resumen.caja.efectivoEsperado === 0 ? "text-emerald-600" : "text-amber-600"}`}>
-                  Diferencia: {formatMoneda(montoFinalReal - resumen.caja.efectivoEsperado)}
-                </p>
-              )}
-            </div>
+            )}
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Notas (Opcional)</label>
+              <label className="text-sm font-semibold">Efectivo Real en Caja (Físico) *</label>
+              <Input
+                type="number"
+                value={montoFinalReal}
+                onChange={(e) => setMontoFinalReal(Number(e.target.value))}
+                placeholder="Ej. 120000"
+                className="h-11 font-bold text-lg"
+              />
+            </div>
+
+            {resumenBalance && (
+              <div className="flex justify-between text-sm px-1">
+                <span>Diferencia (Sobrante/Faltante):</span>
+                <span className={`font-bold ${montoFinalReal - resumenBalance.efectivoEsperado === 0 ? "text-muted-foreground" : montoFinalReal - resumenBalance.efectivoEsperado > 0 ? "text-green-600" : "text-rose-600"}`}>
+                  {formatMoneda(montoFinalReal - resumenBalance.efectivoEsperado)}
+                </span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Notas / Observaciones</label>
               <Input
                 value={notasArqueo}
                 onChange={(e) => setNotasArqueo(e.target.value)}
-                placeholder="Ej. Faltaron $500 por cambio"
+                placeholder="Escribe alguna novedad si la hay..."
+                className="h-11"
               />
             </div>
           </div>
@@ -393,13 +1330,212 @@ export default function CajaPage() {
             <Button variant="outline" onClick={() => setOpenCerrar(false)} disabled={procesandoTurno}>
               Cancelar
             </Button>
-            <Button onClick={handleCerrarCaja} disabled={procesandoTurno || montoFinalReal < 0} variant="destructive">
-              {procesandoTurno && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Registrar Arqueo
+            <Button onClick={handleCerrarCaja} disabled={procesandoTurno} variant="destructive" className="font-semibold">
+              {procesandoTurno ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Cerrar Caja
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* dialog for new expense */}
+      <GastoDialog
+        open={dialogoGastoAbierto}
+        onOpenChange={setDialogoGastoAbierto}
+        onSuccess={() => {
+          cargarGastosLogs();
+          if (fecha === format(new Date(), "yyyy-MM-dd")) {
+            cargarBalance();
+          }
+        }}
+        gastoEditar={gastoEditar}
+      />
+
+      {/* Dialog para desglosar el pago / detalle de venta */}
+      <Dialog open={dialogDetalleAbierto} onOpenChange={setDialogDetalleAbierto}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Receipt className="h-5 w-5 text-primary" />
+              {detalleMovimiento?.tipoMov === "GASTO" ? "Detalle de Gasto" : "Detalle de Transacción"}
+            </DialogTitle>
+            <DialogDescription>
+              {detalleMovimiento?.tipoMov === "GASTO"
+                ? "Resumen del gasto registrado en el sistema."
+                : "Desglose de los productos y servicios adquiridos en esta venta."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {cargandoDetalle ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Obteniendo detalles...</p>
+            </div>
+          ) : detalleMovimiento ? (
+            detalleMovimiento.tipoMov === "GASTO" ? (
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-4 bg-muted/40 p-4 rounded-xl border text-sm">
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Fecha</span>
+                    <span className="font-medium">
+                      {detalleMovimiento.fecha ? format(new Date(detalleMovimiento.fecha), "dd/MM/yyyy") : "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Registrado por</span>
+                    <span className="font-medium">{detalleMovimiento.usuario?.nombre}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Método de Pago</span>
+                    <span className="font-medium uppercase">{detalleMovimiento.metodoPago}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Categoría</span>
+                    <span className="font-medium">{detalleMovimiento.categoria}</span>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Concepto</h4>
+                  <p className="text-base text-foreground font-medium p-3 bg-card border rounded-lg">
+                    {detalleMovimiento.concepto}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center border-t pt-3 font-bold text-lg">
+                  <span>Monto del Gasto:</span>
+                  <span className="text-rose-600 dark:text-rose-400">{formatMoneda(detalleMovimiento.monto)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-5 py-2">
+                {/* General Info Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-muted/40 p-4 rounded-xl border text-xs sm:text-sm">
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Fecha / Hora</span>
+                    <span className="font-semibold text-foreground">
+                      {format(new Date(detalleMovimiento.createdAt), "dd/MM/yyyy HH:mm")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Atendido por</span>
+                    <span className="font-semibold text-foreground">{detalleMovimiento.usuario?.nombre}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Cliente</span>
+                    <span className="font-semibold text-foreground">{detalleMovimiento.cliente?.nombre || "Desconocido"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Método de Pago</span>
+                    <span className="font-semibold text-foreground">
+                      {detalleMovimiento.esVentaFiada 
+                        ? `Fiado (Pendiente: ${formatMoneda(detalleMovimiento.saldoPendiente)})` 
+                        : detalleMovimiento.metodoPago}
+                    </span>
+                  </div>
+                  {detalleMovimiento.terminal && (
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Caja</span>
+                      <span className="font-semibold text-foreground">{detalleMovimiento.terminal?.nombre}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Estado</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{detalleMovimiento.estado}</span>
+                  </div>
+                </div>
+
+                {/* Items Breakdown Table */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold text-foreground">Productos / Servicios comprados</h4>
+                  <div className="border rounded-xl overflow-hidden bg-card">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold py-2 px-3">Item</TableHead>
+                          <TableHead className="text-xs font-semibold py-2 px-3">Realizado por</TableHead>
+                          <TableHead className="text-center text-xs font-semibold py-2 px-3">Cant.</TableHead>
+                          <TableHead className="text-right text-xs font-semibold py-2 px-3">Precio</TableHead>
+                          <TableHead className="text-right text-xs font-semibold py-2 px-3">Subtotal</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {detalleMovimiento.items?.map((item: any) => (
+                          <TableRow key={item.id} className="hover:bg-muted/5">
+                            <TableCell className="py-2.5 px-3 text-xs sm:text-sm">
+                              <p className="font-medium text-foreground text-left">
+                                {item.producto?.nombre || item.servicio?.nombre || "Item sin nombre"}
+                              </p>
+                              {item.producto?.codigo && (
+                                <p className="text-[10px] text-muted-foreground text-left">Cód: {item.producto.codigo}</p>
+                              )}
+                              {item.servicio && (
+                                <p className="text-[10px] text-primary font-medium text-left">Servicio</p>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2.5 px-3 text-xs sm:text-sm text-left font-medium text-muted-foreground">
+                              {item.empleado?.nombre || "—"}
+                            </TableCell>
+                            <TableCell className="text-center py-2.5 px-3 text-xs sm:text-sm font-medium">
+                              {parseFloat(item.cantidad.toString())}
+                            </TableCell>
+                            <TableCell className="text-right py-2.5 px-3 text-xs sm:text-sm font-medium">
+                              {formatMoneda(parseFloat(item.precio.toString()))}
+                            </TableCell>
+                            <TableCell className="text-right py-2.5 px-3 text-xs sm:text-sm font-bold text-foreground">
+                              {formatMoneda(parseFloat(item.subtotal.toString()))}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Summary Totals */}
+                <div className="space-y-1.5 border-t pt-3 text-xs sm:text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal:</span>
+                    <span>{formatMoneda(detalleMovimiento.subtotal)}</span>
+                  </div>
+                  {detalleMovimiento.impuesto > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Impuestos:</span>
+                      <span>{formatMoneda(detalleMovimiento.impuesto)}</span>
+                    </div>
+                  )}
+                  {detalleMovimiento.descuento > 0 && (
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                      <span>Descuento:</span>
+                      <span>-{formatMoneda(detalleMovimiento.descuento)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-base border-t pt-2 text-foreground">
+                    <span>Total pagado:</span>
+                    <span>{formatMoneda(detalleMovimiento.total)}</span>
+                  </div>
+                </div>
+
+                {/* Redirection link */}
+                <div className="flex gap-2 justify-end pt-3">
+                  <Button variant="outline" size="sm" onClick={() => setDialogDetalleAbierto(false)}>
+                    Cerrar
+                  </Button>
+                  <Button size="sm" onClick={() => {
+                    setDialogDetalleAbierto(false);
+                    router.push(`/dashboard/ventas/${detalleMovimiento.id}`);
+                  }} className="bg-primary hover:bg-primary/90 font-semibold flex items-center gap-1.5">
+                    <FileText className="h-4 w-4" /> Ver factura completa
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="text-center py-10 text-muted-foreground text-sm">
+              No se pudieron encontrar los detalles de este movimiento.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

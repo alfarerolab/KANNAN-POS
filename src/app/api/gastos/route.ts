@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (desde) fechaFiltro.gte = new Date(desde);
     if (hasta) {
       const hastaDate = new Date(hasta);
-      hastaDate.setHours(23, 59, 59, 999);
+      hastaDate.setUTCHours(23, 59, 59, 999);
       fechaFiltro.lte = hastaDate;
     }
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       data: {
         concepto: concepto.trim(),
         monto: new Decimal(parseFloat(monto)),
-        fecha: fecha ? new Date(fecha) : new Date(),
+        fecha: fecha ? new Date(fecha.includes("T") ? fecha : fecha + "T12:00:00") : new Date(),
         metodoPago: metodoPago || "EFECTIVO",
         categoriaId,
         usuarioId,

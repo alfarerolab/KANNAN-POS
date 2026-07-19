@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -112,8 +113,8 @@ export function useServiceLoader({
         (servicio.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (servicio.categoria?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      // Filtro de categoría
-      const categoriaMatch = !categoriaSeleccionada || 
+      // Filtro de categoría (se ignora si hay un término de búsqueda para hacer la búsqueda global)
+      const categoriaMatch = !!searchTerm || !categoriaSeleccionada || 
         categoriaSeleccionada === null ||
         servicio.categoriaId === categoriaSeleccionada ||
         servicio.categoria?.id === categoriaSeleccionada;

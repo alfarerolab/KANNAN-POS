@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +14,8 @@ import {
   Heart,
   CalendarPlus,
   Users,
-  TrendingUp
+  TrendingUp,
+  Sparkles
 } from "lucide-react";
 import { ServiceCard } from "./cards/ServicioCard";
 import { Badge } from "@/components/ui/badge";
@@ -110,31 +112,31 @@ export function ServiceGrid({
     : 0;
 
   return (
-    <div className="h-full bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20 rounded-xl overflow-hidden border border-border/50">
-      <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="h-full bg-background rounded-xl overflow-hidden border border-border shadow-sm">
+      <div className="container mx-auto px-4 py-6 space-y-8">
         {/* Header mejorado */}
-        <div className="bg-card dark:bg-background/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-4 md:p-6">
+        <div className="bg-card/40 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-5 md:p-8">
             {/* Título y controles principales */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg">
-                  <Calendar className="h-6 w-6 text-primary-foreground" />
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
+                  <Calendar className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                     Servicios Disponibles
-                    <Heart className="h-5 w-5 text-pink-500" />
+                    <Sparkles className="h-6 w-6 text-indigo-400" />
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-2">
                     <span>Selecciona para agendar tu cita</span>
                     {serviciosActivos.length > 0 && (
-                      <Badge variant="secondary" className="bg-emerald-500/15 text-green-700 dark:text-green-400 text-xs">
+                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 transition-colors">
                         {serviciosActivos.length} activos
                       </Badge>
                     )}
                     {serviciosPopulares.length > 0 && (
-                      <Badge variant="secondary" className="bg-amber-500/15 text-yellow-700 dark:text-yellow-400 text-xs">
+                      <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20 transition-colors">
                         {serviciosPopulares.length} populares
                       </Badge>
                     )}
@@ -175,32 +177,32 @@ export function ServiceGrid({
 
             {/* Estadísticas rápidas */}
             {servicios.length > 0 && (
-              <div className="flex flex-wrap gap-3 mb-6 p-4 bg-gradient-to-r from-purple-50/80 to-pink-50/80 rounded-xl border border-purple-100">
-                <div className="flex items-center gap-2 text-sm">
-                  <CalendarPlus className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  <span className="font-medium text-foreground/80">
+              <div className="flex flex-wrap gap-4 mb-8 p-5 bg-background/40 backdrop-blur-sm rounded-xl border border-border/50">
+                <div className="flex items-center gap-2.5 text-sm">
+                  <CalendarPlus className="h-4 w-4 text-indigo-500" />
+                  <span className="font-medium text-foreground">
                     {servicios.length} servicios disponibles
                   </span>
                 </div>
                 {duracionPromedio > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="font-medium text-foreground/80">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium text-foreground">
                       {duracionPromedio} min promedio
                     </span>
                   </div>
                 )}
                 {serviciosPopulares.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="font-medium text-foreground/80">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <TrendingUp className="h-4 w-4 text-amber-500" />
+                    <span className="font-medium text-foreground">
                       {serviciosPopulares.length} más solicitados
                     </span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-sm px-3 py-1 bg-emerald-500/15 rounded-full border border-emerald-500/30">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="font-medium text-green-700 dark:text-green-400">
+                <div className="flex items-center gap-2.5 text-sm px-4 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="font-medium text-emerald-600">
                     Listo para agendar
                   </span>
                 </div>
@@ -215,7 +217,7 @@ export function ServiceGrid({
                     <Filter className="h-4 w-4" />
                     <span>Filtrar por categoría</span>
                     {categoriaSeleccionada && (
-                      <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-500/30">
+                      <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/30">
                         {categorias.find((c) => c.id === categoriaSeleccionada)?.nombre}
                       </Badge>
                     )}
@@ -239,10 +241,10 @@ export function ServiceGrid({
                     <Button
                       variant={categoriaSeleccionada === null ? "default" : "outline"}
                       onClick={() => onCategoriaChange(null)}
-                      className={`flex-shrink-0 h-12 px-4 transition-all duration-200 ${
+                      className={`flex-shrink-0 h-12 px-5 rounded-xl transition-all duration-300 ${
                         categoriaSeleccionada === null
-                          ? "bg-gradient-to-r from-slate-600 to-slate-800 text-primary-foreground shadow-md"
-                          : "bg-card/90 hover:bg-card border-border hover:border-border"
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
+                          : "bg-background hover:bg-accent border border-border/50 hover:border-border"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -265,10 +267,10 @@ export function ServiceGrid({
                           key={categoria.id}
                           variant={isSelected ? "default" : "outline"}
                           onClick={() => onCategoriaChange(categoria.id)}
-                          className={`flex-shrink-0 h-12 px-4 transition-all duration-200 ${
+                          className={`flex-shrink-0 h-12 px-5 rounded-xl transition-all duration-300 ${
                             isSelected
-                              ? `bg-gradient-to-r ${colorClass} text-primary-foreground shadow-md`
-                              : "bg-card/90 hover:bg-card border-border hover:border-border"
+                              ? `bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105`
+                              : "bg-background hover:bg-accent border border-border/50 hover:border-border"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -296,9 +298,9 @@ export function ServiceGrid({
         <div className="relative">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 bg-card dark:bg-background/60 backdrop-blur-xl rounded-2xl border border-white/40">
-              <div className="relative mb-4">
-                <Loader2 className="h-12 w-12 animate-spin text-purple-600 dark:text-purple-400" />
-                <Calendar className="h-6 w-6 absolute -top-2 -right-2 text-pink-500 animate-pulse" />
+              <div className="relative mb-6">
+                <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
+                <Sparkles className="h-5 w-5 absolute -top-1 -right-1 text-amber-400 animate-pulse" />
               </div>
               <p className="text-lg text-foreground/80 font-medium">Cargando servicios...</p>
             </div>
@@ -318,19 +320,18 @@ export function ServiceGrid({
             <>
               {/* Grid responsivo */}
               <div
-                className={`transition-all duration-300 ${
+                className={`transition-all duration-500 ${
                   viewMode === "grid"
-                    ? "grid gap-4 md:gap-5"
-                    : "grid grid-cols-1 gap-4"
+                    ? "grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    : "flex flex-col gap-4"
                 }`}
-                style={viewMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" } : undefined}
               >
                 {servicios.map((servicio: any, index: number) => (
                   <div
                     key={servicio.id}
-                    className="transform transition-all duration-200 hover:scale-[1.01]"
+                    className="group"
                     style={{
-                      animation: `fadeInUp 0.4s ease-out ${index * 30}ms both`,
+                      animation: `fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${index * 50}ms both`,
                     }}
                   >
                     <ServiceCard

@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
       pagosMultiples, // Flag para indicar si usa pagos múltiples
       pagos, // Array de pagos múltiples
       consumosInternos, // Array de { productoId, cantidad } para consumo interno por servicio
-      comandaId // ID de la comanda para cerrarla
+      comandaId, // ID de la comanda para cerrarla
+      cajaId // ID de la caja registradora
     } = datos;
 
     // Validaciones básicas
@@ -100,14 +101,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Separar productos y servicios
-    const productosIds = items
-      .filter(item => !item.producto.esServicio)
-      .map(item => item.producto.id);
+    // Separar productos y servicios (deduplicar IDs para la validación en BD)
+    const productosIds = [...new Set(
+      items
+        .filter(item => !item.producto.esServicio)
+        .map(item => item.producto.id)
+    )];
 
-    const serviciosIds = items
-      .filter(item => item.producto.esServicio)
-      .map(item => item.producto.servicioId || item.producto.id);
+    const serviciosIds = [...new Set(
+      items
+        .filter(item => item.producto.esServicio)
+        .map(item => item.producto.servicioId || item.producto.id)
+    )];
 
     // Validar productos (incluir datos de combo y componentes)
     const productosValidos = await db.producto.findMany({
@@ -262,6 +267,7 @@ export async function POST(req: NextRequest) {
           usuarioId,
           clienteId: clienteId || null,
           notas: notas || null,
+          cajaId: cajaId || null,
           // Campos para ventas fiadas
           esVentaFiada,
           ...(esVentaFiada && {

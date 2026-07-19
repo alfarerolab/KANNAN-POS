@@ -1,3 +1,4 @@
+// Editado: Importado desde la versión de producción en la VPS
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, Scissors } from "lucide-react";
+import { Package, Scissors, Search } from "lucide-react";
 
 // Hooks
 import { useAutorizacion } from "@/hooks/use-autorizacion";
@@ -121,6 +122,7 @@ function PuntoDeVenta() {
   const [vistaActual, setVistaActual] = useState<"productos" | "servicios">("productos");
   const [filtroDisponibilidad, setFiltroDisponibilidad] = useState<string>("todos");
   const [servicioAutoCargado, setServicioAutoCargado] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<"split" | "catalog" | "cart">("split");
 
   // Estados para diálogos
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -173,6 +175,39 @@ function PuntoDeVenta() {
     totalItems
   } = useCart();
 
+  // 🛡️ NUEVO: Restaurar estado guardado localmente (cliente, notas, pago)
+  useEffect(() => {
+    try {
+      const savedCliente = localStorage.getItem('pos_clienteSeleccionado');
+      const savedNotas = localStorage.getItem('pos_notas');
+      const savedMetodo = localStorage.getItem('pos_metodoPago');
+      
+      if (savedCliente) setClienteSeleccionado(JSON.parse(savedCliente));
+      if (savedNotas) setNotas(savedNotas);
+      if (savedMetodo) setMetodoPagoSeleccionado(savedMetodo);
+    } catch (e) {
+      console.error('Error restaurando estado del POS:', e);
+    }
+  }, []);
+
+  // 🛡️ NUEVO: Guardar estado localmente cuando cambie
+  useEffect(() => {
+    if (clienteSeleccionado) {
+      localStorage.setItem('pos_clienteSeleccionado', JSON.stringify(clienteSeleccionado));
+    } else {
+      localStorage.removeItem('pos_clienteSeleccionado');
+    }
+  }, [clienteSeleccionado]);
+
+  useEffect(() => {
+    if (notas) localStorage.setItem('pos_notas', notas);
+    else localStorage.removeItem('pos_notas');
+  }, [notas]);
+
+  useEffect(() => {
+    if (metodoPagoSeleccionado) localStorage.setItem('pos_metodoPago', metodoPagoSeleccionado);
+  }, [metodoPagoSeleccionado]);
+
   // Hooks especializados para cargar datos
   const { productos, categorias, isLoading: productosLoading } = useProductLoader({
     searchTerm,
@@ -186,8 +221,8 @@ function PuntoDeVenta() {
   const { servicios, isLoading: serviciosLoading } = useServiceLoader({
     empresaId,
     mostrarServicios: configPOS?.mostrarServicios,
-    searchTerm: vistaActual === "servicios" ? searchTerm : "",
-    categoriaSeleccionada: vistaActual === "servicios" ? categoriaSeleccionada : null
+    searchTerm,
+    categoriaSeleccionada
   });
 
   // Hook para procesamiento de ventas
@@ -337,10 +372,7 @@ function PuntoDeVenta() {
 
   // Agregar servicio directo al carrito (walk-in peluquería)
   const handleServicioAlCarrito = useCallback((servicio: any) => {
-    if (verificarDuplicadoServicio(servicio, items)) {
-      toast({ title: "Servicio ya en el carrito", description: `${servicio.nombre} ya está agregado` });
-      return;
-    }
+    // Permitir el mismo servicio varias veces (distintas empleadas)
     setServicioToAddToCart(servicio);
     setSelectEmployeeOpen(true);
   }, [items, toast]);
@@ -350,9 +382,13 @@ function PuntoDeVenta() {
     const servicio = servicioToAddToCart;
     if (!servicio) return;
 
-    const empleadoIdFinal = empleadoId === "ninguno" ? undefined : empleadoId;
+    const empleadoIdFinal = empleadoId || undefined;
+
+    // ID único por instancia: garantiza que el mismo servicio crea una línea nueva cada vez
+    const idUnico = `${servicio.id}_${Date.now()}`;
+
     const servicioCarrito: ProductoCarrito = {
-      id: servicio.id,
+      id: idUnico,
       nombre: servicio.nombre,
       precio: Number(servicio.precio) || 0,
       imagen: servicio.imagen || undefined,
@@ -511,11 +547,12 @@ function PuntoDeVenta() {
     const params = new URLSearchParams(window.location.search);
     const autoAddComanda = params.get('autoAddComanda');
 
-    if (autoAddComanda === 'true' && empresaId && items.length === 0) {
+    if (autoAddComanda === 'true' && empresaId) {
       const comandaParaCobro = localStorage.getItem('comandaParaCobro');
 
       if (comandaParaCobro) {
         try {
+          vaciarCarrito(); // Forzar vaciado antes de cargar la cuenta
           const comanda = JSON.parse(comandaParaCobro);
 
           if (comanda.empresaId === empresaId) {
@@ -595,20 +632,16 @@ function PuntoDeVenta() {
     const params = new URLSearchParams(window.location.search);
     const autoAddService = params.get('autoAddService');
 
-    if (autoAddService === 'true' && empresaId && !servicioAutoCargado && items.length === 0) {
+    if (autoAddService === 'true' && empresaId && !servicioAutoCargado) {
       const servicioParaCobro = localStorage.getItem('servicioParaCobro');
 
       if (servicioParaCobro) {
         try {
+          vaciarCarrito(); // Forzar vaciado antes de cargar el servicio
           const servicio = JSON.parse(servicioParaCobro);
 
           if (servicio.empresaId === empresaId || servicio.cliente?.empresaId === empresaId) {
-            if (verificarDuplicadoServicio(servicio, items)) {
-              toast({
-                title: "Servicio ya en el carrito",
-                description: `${servicio.nombre} ya está agregado`
-              });
-            } else {
+            {
               const servicioCarrito: ProductoCarrito = {
                 id: servicio.servicioId || servicio.id,
                 nombre: servicio.nombre,
@@ -677,7 +710,7 @@ function PuntoDeVenta() {
 
 
   // FUNCIÓN PARA PROCESAR VENTA CON PAGO ÚNICO
-  const handleProcesarVenta = async (referencia?: string) => {
+  const handleProcesarVenta = async (referencia?: string, cajaId?: string) => {
     setPagosRealizados([]); // Limpiar pagos múltiples
 
     // Si hay referencia (transferencia / tarjeta), la empaquetamos como un pago único
@@ -693,7 +726,8 @@ function PuntoDeVenta() {
       session,
       pagosConReferencia, // undefined cuando no hay referencia (comportamiento original)
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
-      comandaActivaId
+      comandaActivaId,
+      cajaId // Caja registradora seleccionada
     );
 
     if (resultado) {
@@ -711,7 +745,7 @@ function PuntoDeVenta() {
   };
 
   // FUNCIÓN PARA PROCESAR VENTA CON PAGOS MÚLTIPLES
-  const handleProcesarVentaMultiple = async (pagos: PagoDetalle[]) => {
+  const handleProcesarVentaMultiple = async (pagos: PagoDetalle[], cajaId?: string) => {
     setPagosRealizados(pagos); // Guardar pagos
 
     const resultado = await procesarVenta(
@@ -721,7 +755,8 @@ function PuntoDeVenta() {
       session,
       pagos, // Pasar los pagos múltiples
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
-      comandaActivaId
+      comandaActivaId,
+      cajaId // Caja registradora seleccionada
     );
 
     if (resultado) {
@@ -750,6 +785,11 @@ function PuntoDeVenta() {
 
     localStorage.removeItem('servicioParaCobro');
     localStorage.removeItem('servicioParaAgendamiento');
+    
+    // 🧹 Limpiar almacenamiento persistente del POS al terminar venta
+    localStorage.removeItem('pos_clienteSeleccionado');
+    localStorage.removeItem('pos_notas');
+    localStorage.removeItem('pos_metodoPago');
 
     if (esVeterinaria()) {
       setMascotaSeleccionada(null);
@@ -772,14 +812,18 @@ function PuntoDeVenta() {
           esVeterinaria={esVeterinaria()}
           onOpenClientDialog={() => setClienteDialogOpen(true)}
           onOpenMascotaDialog={() => setMascotaDialogOpen(true)}
+          layoutMode={layoutMode}
+          onLayoutModeChange={(mode) => setLayoutMode(mode)}
+          totalItems={totalItems}
         />
       </div>
 
       {/* Cuerpo: productos (scroll) + carrito (fijo altura completa) */}
       <div className="flex flex-1 overflow-hidden gap-4 px-4 pb-4 min-h-0">
-        {/* Panel Izquierdo - scroll interno */}
-        <div className="flex-1 overflow-y-auto space-y-4 min-w-0">
-          {/* Barra de búsqueda */}
+        {/* Panel Izquierdo - scroll interno (solo visible si no está en vista solo Carrito) */}
+        {(layoutMode === "split" || layoutMode === "catalog") && (
+          <div className="flex-1 overflow-y-auto space-y-4 min-w-0">
+            {/* Barra de búsqueda */}
           <UnifiedSearchBar
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
@@ -792,8 +836,7 @@ function PuntoDeVenta() {
             productos={vistaActual === "productos" ? productos : servicios}
             empresaId={empresaId}
             onAddToCart={vistaActual === "productos" ? handleAddToCart : handleSelectServicio}
-            placeholder={vistaActual === "productos" ? "Buscar productos o escanear código..." : "Buscar servicios..."}
-            vistaActual={vistaActual}
+            placeholder="Buscar productos o servicios..."
           />
 
           {/* Toggle de Cortesía para Escaneos Inmediatos */}
@@ -809,8 +852,8 @@ function PuntoDeVenta() {
             </Label>
           </div>
 
-          {/* Tabs para productos y servicios */}
-          {tieneServicios() ? (
+          {/* Vista Dinámica: Pestañas si no hay búsqueda, Vista Unificada si hay búsqueda */}
+          {tieneServicios() && !searchTerm ? (
             <Card className="border-0 shadow-md bg-card/90 backdrop-blur-sm">
               <CardContent className="p-6">
                 <Tabs value={vistaActual} onValueChange={(value) => setVistaActual(value as "productos" | "servicios")}>
@@ -864,7 +907,7 @@ function PuntoDeVenta() {
                       categorias={categorias}
                       categoriaSeleccionada={categoriaSeleccionada}
                       isLoading={serviciosLoading}
-                      searchTerm={vistaActual === "servicios" ? searchTerm : ""}
+                      searchTerm={searchTerm}
                       formatearMoneda={formatearMoneda}
                       onCategoriaChange={setCategoriaSeleccionada}
                       onSelectService={handleSelectServicio}
@@ -876,81 +919,155 @@ function PuntoDeVenta() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-0 shadow-md bg-card/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <ProductGrid
-                  productos={productos}
-                  categorias={categorias}
-                  categoriaSeleccionada={categoriaSeleccionada}
-                  isLoading={productosLoading}
-                  searchTerm={searchTerm}
-                  configuracion={configuracion}
-                  formatearMoneda={formatearMoneda}
-                  tieneVariantes={tieneVariantes()}
-                  tieneLotes={tieneLotes()}
-                  tieneVencimientos={tieneVencimientos()}
-                  varianteSeleccionada={varianteSeleccionada}
-                  setVarianteSeleccionada={setVarianteSeleccionada}
-                  loteSeleccionado={loteSeleccionado}
-                  setLoteSeleccionado={setLoteSeleccionado}
-                  fechaVencimiento={fechaVencimiento}
-                  setFechaVencimiento={setFechaVencimiento}
-                  onCategoriaChange={setCategoriaSeleccionada}
-                  onAddToCart={handleAddToCart}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-6 pb-10">
+              {/* Si NO hay servicios, simplemente mostrar grid de productos */}
+              {!tieneServicios() && (
+                <Card className="border-0 shadow-md bg-card/90 backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <ProductGrid
+                      productos={productos}
+                      categorias={categorias}
+                      categoriaSeleccionada={categoriaSeleccionada}
+                      isLoading={productosLoading}
+                      searchTerm={searchTerm}
+                      configuracion={configuracion}
+                      formatearMoneda={formatearMoneda}
+                      tieneVariantes={tieneVariantes()}
+                      tieneLotes={tieneLotes()}
+                      tieneVencimientos={tieneVencimientos()}
+                      varianteSeleccionada={varianteSeleccionada}
+                      setVarianteSeleccionada={setVarianteSeleccionada}
+                      loteSeleccionado={loteSeleccionado}
+                      setLoteSeleccionado={setLoteSeleccionado}
+                      fechaVencimiento={fechaVencimiento}
+                      setFechaVencimiento={setFechaVencimiento}
+                      onCategoriaChange={setCategoriaSeleccionada}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Si SÍ hay servicios y estamos buscando, mostrar vista unificada apilada */}
+              {tieneServicios() && (
+                <>
+                  {productos.length > 0 && (
+                    <Card className="border-0 shadow-md bg-card/90 backdrop-blur-sm">
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+                          <Package className="h-5 w-5" /> Productos
+                        </h3>
+                        <ProductGrid
+                          productos={productos}
+                          categorias={categorias}
+                          categoriaSeleccionada={categoriaSeleccionada}
+                          isLoading={productosLoading}
+                          searchTerm={searchTerm}
+                          configuracion={configuracion}
+                          formatearMoneda={formatearMoneda}
+                          tieneVariantes={tieneVariantes()}
+                          tieneLotes={tieneLotes()}
+                          tieneVencimientos={tieneVencimientos()}
+                          varianteSeleccionada={varianteSeleccionada}
+                          setVarianteSeleccionada={setVarianteSeleccionada}
+                          loteSeleccionado={loteSeleccionado}
+                          setLoteSeleccionado={setLoteSeleccionado}
+                          fechaVencimiento={fechaVencimiento}
+                          setFechaVencimiento={setFechaVencimiento}
+                          onCategoriaChange={setCategoriaSeleccionada}
+                          onAddToCart={handleAddToCart}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {servicios.length > 0 && (
+                    <Card className="border-0 shadow-md bg-card/90 backdrop-blur-sm">
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+                          <Scissors className="h-5 w-5" /> Servicios
+                        </h3>
+                        <ServiceGrid
+                          servicios={servicios}
+                          categorias={categorias}
+                          categoriaSeleccionada={categoriaSeleccionada}
+                          isLoading={serviciosLoading}
+                          searchTerm={searchTerm}
+                          formatearMoneda={formatearMoneda}
+                          onCategoriaChange={setCategoriaSeleccionada}
+                          onSelectService={handleSelectServicio}
+                          onAddToCart={handleServicioAlCarrito}
+                          redirectToCitas={true}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {productos.length === 0 && servicios.length === 0 && searchTerm && (
+                    <div className="text-center py-12 text-muted-foreground bg-card/50 rounded-xl border border-border">
+                      <Search className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-lg">No se encontraron resultados para "{searchTerm}"</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
-        </div>
+          </div>
+        )}
 
-        {/* Carrito (Maneja su propia visibilidad mobile/desktop) */}
-        <ShoppingCartPanel
-          items={items}
-          totalItems={totalItems}
-          subtotal={subtotal}
-          total={total}
-          formatearMoneda={formatearMoneda}
-          onUpdateQuantity={actualizarCantidad}
-          onUpdateWeight={actualizarPeso}
-          onRemoveItem={eliminarItem}
-          onConsumoChange={(itemId, consumos) => {
-            setConsumosInternosPorItem(prev => ({
-              ...prev,
-              [itemId]: consumos.map(c => ({ productoId: c.productoId, cantidad: c.cantidad }))
-            }));
-          }}
-          onOpenCheckout={() => {
-            const esPeluqueriaActiva =
-              configuracion?.empresa?.tipoNegocio === 'PELUQUERIA' ||
-              configuracion?.empresa?.tipoNegocio === 'SALON_BELLEZA';
-            const itemsServicio = items.filter(i => i.producto.esServicio);
-            const tieneServicios = itemsServicio.length > 0;
-
-            if (esPeluqueriaActiva && tieneServicios) {
-              // Si todos los servicios ya tienen empleado asignado, ir directo al cobro
-              const todosConEmpleado = itemsServicio.every(i => i.empleadoId);
-              if (todosConEmpleado) {
-                setCheckoutDialogOpen(true);
-              } else {
-                setEmployeeAssignmentOpen(true);
-              }
-            } else {
-              setCheckoutDialogOpen(true);
-            }
-          }}
-          onClearCart={vaciarCarrito}
-          empleados={empleadosDisponibles}
-          initialConsumos={
-            Object.keys(consumosInternosPorItem).reduce((acc: any, key) => {
-              acc[key] = consumosInternosPorItem[key].map(c => ({
-                productoId: c.productoId,
-                nombreProducto: (c as any).nombreProducto || 'Producto',
-                cantidad: c.cantidad
+        {/* Carrito */}
+        {(layoutMode === "split" || layoutMode === "cart") && (
+          <ShoppingCartPanel
+            isFullWidth={layoutMode === "cart"}
+            onBackToCatalog={() => setLayoutMode("catalog")}
+            items={items}
+            totalItems={totalItems}
+            subtotal={subtotal}
+            total={total}
+            formatearMoneda={formatearMoneda}
+            onUpdateQuantity={actualizarCantidad}
+            onUpdateWeight={actualizarPeso}
+            onRemoveItem={eliminarItem}
+            onConsumoChange={(itemId, consumos) => {
+              setConsumosInternosPorItem(prev => ({
+                ...prev,
+                [itemId]: consumos.map(c => ({ productoId: c.productoId, cantidad: c.cantidad }))
               }));
-              return acc;
-            }, {})
-          }
-        />
+            }}
+            onOpenCheckout={() => {
+              const esPeluqueriaActiva =
+                configuracion?.empresa?.tipoNegocio === 'PELUQUERIA' ||
+                configuracion?.empresa?.tipoNegocio === 'SALON_BELLEZA';
+              const itemsServicio = items.filter(i => i.producto.esServicio);
+              const tieneServicios = itemsServicio.length > 0;
+
+              if (esPeluqueriaActiva && tieneServicios) {
+                // Si todos los servicios ya tienen empleado asignado, ir directo al cobro
+                const todosConEmpleado = itemsServicio.every(i => i.empleadoId);
+                if (todosConEmpleado) {
+                  setCheckoutDialogOpen(true);
+                } else {
+                  setEmployeeAssignmentOpen(true);
+                }
+              } else {
+                setCheckoutDialogOpen(true);
+              }
+            }}
+            onClearCart={vaciarCarrito}
+            empleados={empleadosDisponibles}
+            initialConsumos={
+              Object.keys(consumosInternosPorItem).reduce((acc: any, key) => {
+                acc[key] = consumosInternosPorItem[key].map(c => ({
+                  productoId: c.productoId,
+                  nombreProducto: (c as any).nombreProducto || 'Producto',
+                  cantidad: c.cantidad
+                }));
+                return acc;
+              }, {})
+            }
+          />
+        )}
 
         {/* Diálogos */}
         {/* Dialogs peluquería */}

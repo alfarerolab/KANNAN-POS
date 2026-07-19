@@ -85,6 +85,9 @@ interface VentaFiada {
 const METODOS_PAGO = [
   { value: "EFECTIVO", label: "Efectivo", icon: "💵" },
   { value: "TRANSFERENCIA", label: "Transferencia", icon: "🏦" },
+  { value: "NEQUI", label: "Nequi", icon: "📱" },
+  { value: "DAVIPLATA", label: "Daviplata", icon: "📱" },
+  { value: "BANCOLOMBIA", label: "Bancolombia", icon: "🏦" },
   { value: "TARJETA_CREDITO", label: "Tarjeta de Crédito", icon: "💳" },
   { value: "TARJETA_DEBITO", label: "Tarjeta de Débito", icon: "💳" },
   { value: "OTRO", label: "Otro", icon: "💰" },

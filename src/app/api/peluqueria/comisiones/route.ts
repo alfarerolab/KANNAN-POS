@@ -33,11 +33,7 @@ export async function GET(request: NextRequest) {
     // Construir filtro de fecha
     const fechaFiltro: any = {};
     if (desde) fechaFiltro.gte = new Date(desde);
-    if (hasta) {
-      const hastaDate = new Date(hasta);
-      hastaDate.setHours(23, 59, 59, 999);
-      fechaFiltro.lte = hastaDate;
-    }
+    if (hasta) fechaFiltro.lte = new Date(hasta);
 
     const where: any = {
       venta: {
