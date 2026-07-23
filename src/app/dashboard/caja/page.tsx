@@ -292,7 +292,7 @@ export default function CajaPage() {
       if (!res.ok) throw new Error("Error al cargar los gastos");
       const data = await res.json();
       setGastos(data.gastos || []);
-      
+
       const total = (data.gastos || []).reduce((acc: number, curr: any) => acc + curr.monto, 0);
       setGastosStats({
         gastosCount: (data.gastos || []).length,
@@ -355,8 +355,8 @@ export default function CajaPage() {
       const res = await fetch("/api/caja/turnos/cerrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          montoFinalReal, 
+        body: JSON.stringify({
+          montoFinalReal,
           notas: notasArqueo,
           cajaId: resumenBalance?.turnoAbierto?.cajaId || (cajasSeleccionadas.length === 1 ? cajasSeleccionadas[0] : undefined)
         })
@@ -395,7 +395,7 @@ export default function CajaPage() {
 
   // --- EXPORT TO CSV CLIENT SIDE ---
   const handleExportarCobros = () => {
-    const dataToExport = selectedCobros.length > 0 
+    const dataToExport = selectedCobros.length > 0
       ? cobros.filter(c => selectedCobros.includes(c.id))
       : cobros;
 
@@ -433,7 +433,7 @@ export default function CajaPage() {
   };
 
   const handleExportarGastos = () => {
-    const dataToExport = selectedGastos.length > 0 
+    const dataToExport = selectedGastos.length > 0
       ? gastos.filter(g => selectedGastos.includes(g.id))
       : gastos;
 
@@ -492,16 +492,16 @@ export default function CajaPage() {
   };
 
   // Expense matching filters
-  const gastosFiltrados = gastos.filter(g => 
-    busquedaGastos 
-      ? g.concepto.toLowerCase().includes(busquedaGastos.toLowerCase()) || 
-        g.categoria?.nombre.toLowerCase().includes(busquedaGastos.toLowerCase())
+  const gastosFiltrados = gastos.filter(g =>
+    busquedaGastos
+      ? g.concepto.toLowerCase().includes(busquedaGastos.toLowerCase()) ||
+      g.categoria?.nombre.toLowerCase().includes(busquedaGastos.toLowerCase())
       : true
   );
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-10">
-      
+
       {/* Dynamic Main Header Banner */}
       <div className="relative px-6 lg:px-8 pt-6 pb-5 border-b border-border/60">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/40 rounded-t-2xl" />
@@ -551,10 +551,10 @@ export default function CajaPage() {
         {/* TAB 1: BALANCE DE CAJA & ARQUEO */}
         {/* ========================================================================= */}
         <TabsContent value="balance" className="space-y-6 outline-none">
-          
+
           {/* Box/Terminal Selection Checkboxes & Date Control */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start bg-card/40 border border-border/80 rounded-2xl p-5 shadow-sm">
-            
+
             <div className="lg:col-span-3 space-y-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                 💼 Seleccionar Caja Registradora:
@@ -570,11 +570,10 @@ export default function CajaPage() {
                       variant={isSelected ? "default" : "outline"}
                       size="sm"
                       onClick={() => seleccionarCaja(c.id)}
-                      className={`rounded-full px-5 py-2 text-xs font-semibold transition-all shadow-sm ${
-                        isSelected 
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20" 
+                      className={`rounded-full px-5 py-2 text-xs font-semibold transition-all shadow-sm ${isSelected
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20"
                           : "hover:bg-muted"
-                      }`}
+                        }`}
                     >
                       <span className="mr-1.5">{isSelected ? "✅" : "💵"}</span>
                       {c.nombre}
@@ -622,8 +621,8 @@ export default function CajaPage() {
                     </p>
                   ) : (
                     <p className="font-semibold text-sky-800 dark:text-sky-300">
-                      {cajasSeleccionadas.length === 1 
-                        ? `Caja "${cajas.find(c => c.id === cajasSeleccionadas[0])?.nombre || "seleccionada"}" en Registro Automático (Base: $0)` 
+                      {cajasSeleccionadas.length === 1
+                        ? `Caja "${cajas.find(c => c.id === cajasSeleccionadas[0])?.nombre || "seleccionada"}" en Registro Automático (Base: $0)`
                         : "Cajas en Registro Automático (Base: $0)"}
                     </p>
                   )}
@@ -633,27 +632,27 @@ export default function CajaPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => {
                     if (cajasSeleccionadas.length === 1) {
                       setCajaSeleccionadaId(cajasSeleccionadas[0]);
                     }
                     setOpenCerrar(true);
-                  }} 
+                  }}
                   className="h-10 px-5 shadow-sm font-semibold"
                 >
                   Cerrar Caja (Arqueo)
                 </Button>
-                
+
                 {!resumenBalance.turnoAbierto && (
-                  <Button 
+                  <Button
                     onClick={() => {
                       if (cajasSeleccionadas.length === 1) {
                         setCajaSeleccionadaId(cajasSeleccionadas[0]);
                       }
                       setOpenAbrir(true);
-                    }} 
+                    }}
                     variant="outline"
                     className="h-10 px-5 border-primary/40 text-primary hover:bg-primary/10 shadow-sm font-semibold"
                   >
@@ -671,7 +670,7 @@ export default function CajaPage() {
             </div>
           ) : resumenBalance ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              
+
               <Card className="shadow-sm border-border bg-card/60">
                 <CardHeader className="pb-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CAJA (Efectivo)</span>
@@ -726,7 +725,7 @@ export default function CajaPage() {
               <h3 className="font-bold text-foreground">Movimientos y facturación del día</h3>
               <p className="text-xs text-muted-foreground">Listado cronológico de cobros y gastos del día seleccionado</p>
             </div>
-            
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -753,8 +752,8 @@ export default function CajaPage() {
                     </TableRow>
                   ) : (
                     movimientos.map((m) => (
-                      <TableRow 
-                        key={m.id} 
+                      <TableRow
+                        key={m.id}
                         className="hover:bg-muted/10 transition-colors cursor-pointer"
                         onClick={() => verDetalleMovimiento(m.id, m.ventaId)}
                       >
@@ -792,10 +791,10 @@ export default function CajaPage() {
         {/* TAB 2: DETALLE DE COBROS */}
         {/* ========================================================================= */}
         <TabsContent value="cobros" className="space-y-6 outline-none">
-          
+
           {/* Advanced Filter Box */}
           <div className="bg-card/40 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
-            
+
             {/* Period selector */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">Período:</span>
@@ -804,11 +803,10 @@ export default function CajaPage() {
                   <button
                     key={p}
                     onClick={() => setPeriodoCobros(p)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${
-                      periodoCobros === p 
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${periodoCobros === p
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {p === "anio" ? "Año" : p}
                   </button>
@@ -827,7 +825,7 @@ export default function CajaPage() {
 
             {/* Dropdown Filters row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              
+
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Empleados</span>
                 <Select value={filtroEmpleadoCobros} onValueChange={setFiltroEmpleadoCobros}>
@@ -872,6 +870,7 @@ export default function CajaPage() {
                     <SelectItem value="DAVIPLATA">Daviplata</SelectItem>
                     <SelectItem value="TARJETA">Tarjeta</SelectItem>
                     <SelectItem value="FIADO">Fiado</SelectItem>
+                    <SelectItem value="MIXTO">Mixto</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -902,7 +901,7 @@ export default function CajaPage() {
 
           {/* Metric cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-            
+
             <Card className="shadow-sm border-border bg-card/60">
               <CardHeader className="pb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">COBROS</span>
@@ -1044,10 +1043,10 @@ export default function CajaPage() {
         {/* TAB 3: CONTROL DE GASTOS */}
         {/* ========================================================================= */}
         <TabsContent value="gastos" className="space-y-6 outline-none">
-          
+
           {/* Expenses Filter Box */}
           <div className="bg-card/40 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
-            
+
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">Período:</span>
@@ -1056,11 +1055,10 @@ export default function CajaPage() {
                     <button
                       key={p}
                       onClick={() => setPeriodoGastos(p)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${
-                        periodoGastos === p 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${periodoGastos === p
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
-                      }`}
+                        }`}
                     >
                       {p === "anio" ? "Año" : p}
                     </button>
@@ -1098,7 +1096,7 @@ export default function CajaPage() {
 
           {/* Metric cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             <Card className="shadow-sm border-border bg-card/60">
               <CardHeader className="pb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">GASTOS</span>
@@ -1216,7 +1214,7 @@ export default function CajaPage() {
       {/* ========================================================================= */}
       {/* SHIFT OPEN/CLOSE DIALOGS */}
       {/* ========================================================================= */}
-      
+
       {/* Dialog: Abrir Caja */}
       <Dialog open={openAbrir} onOpenChange={setOpenAbrir}>
         <DialogContent className="sm:max-w-md">
@@ -1426,8 +1424,8 @@ export default function CajaPage() {
                   <div>
                     <span className="text-xs text-muted-foreground block">Método de Pago</span>
                     <span className="font-semibold text-foreground">
-                      {detalleMovimiento.esVentaFiada 
-                        ? `Fiado (Pendiente: ${formatMoneda(detalleMovimiento.saldoPendiente)})` 
+                      {detalleMovimiento.esVentaFiada
+                        ? `Fiado (Pendiente: ${formatMoneda(detalleMovimiento.saldoPendiente)})`
                         : detalleMovimiento.metodoPago}
                     </span>
                   </div>

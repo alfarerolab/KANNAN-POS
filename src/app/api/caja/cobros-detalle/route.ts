@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
         usuario: true,
         terminal: true,
         caja: true,
+        pagos: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -101,16 +102,23 @@ export async function GET(request: NextRequest) {
       const total = parseFloat(v.total.toString());
       const impuesto = parseFloat(v.impuesto.toString());
       const subtotal = parseFloat(v.subtotal.toString());
-      
+
       const pagado = parseFloat(v.montoPagado.toString());
-      const saldoPendiente = v.esVentaFiada 
-        ? parseFloat((v.saldoPendiente ?? 0).toString()) 
+      const saldoPendiente = v.esVentaFiada
+        ? parseFloat((v.saldoPendiente ?? 0).toString())
         : 0;
 
       totalImporte += subtotal;
       totalImpuestos += impuesto;
       totalDeuda += saldoPendiente;
       totalNeto += total;
+
+      let formatoPago = v.esVentaFiada ? `Fiado (Abonado: $${pagado})` : v.metodoPago;
+
+      if (v.metodoPago === "MIXTO" && v.pagos && v.pagos.length > 0) {
+        const pagosFormat = v.pagos.map((p: any) => `${p.metodoPago}: $${parseFloat(p.monto.toString())}`).join(', ');
+        formatoPago = `Mixto (${pagosFormat})`;
+      }
 
       return {
         id: v.id,
@@ -119,7 +127,7 @@ export async function GET(request: NextRequest) {
         cobrador: v.usuario.nombre,
         caja: v.caja?.nombre || v.terminal?.nombre || "Principal",
         factura: v.reciboImpreso ? "Sí" : "No", // O ID de factura
-        formaPago: v.esVentaFiada ? `Fiado (Abonado: $${pagado})` : v.metodoPago,
+        formaPago: formatoPago,
         importe: subtotal,
         impuesto: impuesto,
         deuda: saldoPendiente,
