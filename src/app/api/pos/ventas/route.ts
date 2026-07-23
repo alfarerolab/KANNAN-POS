@@ -203,9 +203,9 @@ export async function POST(req: NextRequest) {
     const idsADescontar = Array.from(cantidadesPorProducto.keys());
     const productosADescontar = idsADescontar.length > 0
       ? await db.producto.findMany({
-          where: { id: { in: idsADescontar }, empresaId },
-          select: { id: true, nombre: true, enStock: true, tipoVenta: true },
-        })
+        where: { id: { in: idsADescontar }, empresaId },
+        select: { id: true, nombre: true, enStock: true, tipoVenta: true },
+      })
       : [];
 
     // Verificar stock de cada producto/componente
@@ -258,9 +258,9 @@ export async function POST(req: NextRequest) {
           impuesto,
           descuento,
           total,
-          // Si es pago múltiple, usar "MIXTO" como método principal si incluye FIADO
+          // Si es pago múltiple, usar "MIXTO" como método principal
           metodoPago: pagosMultiples
-            ? (esVentaFiada ? "MIXTO" : "OTRO")
+            ? "MIXTO"
             : (metodoPago as MetodoPago),
           estado: "COMPLETADA",
           empresaId,
@@ -344,9 +344,9 @@ export async function POST(req: NextRequest) {
       // Re-obtener stock fresco dentro de la transacción
       const productosParaDescontar = idsADescontar.length > 0
         ? await tx.producto.findMany({
-            where: { id: { in: idsADescontar }, empresaId },
-            select: { id: true, nombre: true, enStock: true, tipoVenta: true },
-          })
+          where: { id: { in: idsADescontar }, empresaId },
+          select: { id: true, nombre: true, enStock: true, tipoVenta: true },
+        })
         : [];
 
       for (const producto of productosParaDescontar) {
