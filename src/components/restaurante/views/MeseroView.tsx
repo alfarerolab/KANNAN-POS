@@ -157,104 +157,84 @@ function MapaMesasAgrupado() {
     return () => clearInterval(id);
   }, []);
 
-  const zonas = useMemo(() => {
-    const map = new Map<string, RestauranteMesa[]>();
-    for (const m of mesas) {
-      const z = m.ubicacion?.trim() || "Sala Principal";
-      if (!map.has(z)) map.set(z, []);
-      map.get(z)!.push(m);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [mesas]);
-
-  if (mesas.length === 0) {
-    return (
-      <div className="rounded-3xl border border-dashed border-border p-10 text-center">
-        <Armchair className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
-        <p className="text-lg font-medium text-foreground">Aún no hay mesas creadas</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Crea la primera mesa para empezar a operar.
-        </p>
-        <Button className="mt-4" onClick={() => setCrearMesaOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Crear mesa
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {zonas.map(([zona, mesasZona]) => (
-        <div key={zona} className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <MapPin className="h-4 w-4 text-orange-500" />
-            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-              {zona}
-            </h3>
-            <div className="h-px flex-1 bg-border/50" />
-          </div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+      {mesas.map((mesa) => {
+        const seleccionada = mesa.id === mesaSeleccionada?.id;
+        const min = mesa.pedidoAbierto ? getMinutos(mesa.pedidoAbierto.createdAt) : 0;
+        const alerta = min >= 60;
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-            {mesasZona.map((mesa) => {
-              const seleccionada = mesa.id === mesaSeleccionada?.id;
-              const min = mesa.pedidoAbierto ? getMinutos(mesa.pedidoAbierto.createdAt) : 0;
-              const alerta = min >= 60;
+        return (
+          <button
+            key={mesa.id}
+            type="button"
+            onClick={() => setSelectedMesaId(mesa.id)}
+            className={`relative flex flex-col justify-between rounded-[24px] border-[2px] p-4 text-left transition-all duration-200 ${getMesaTone(mesa)} ${seleccionada
+                ? "ring-4 ring-orange-500/20 shadow-lg border-orange-500 scale-[1.02] z-10"
+                : "hover:border-border hover:shadow-sm"
+              } ${alerta ? "border-red-500/50 bg-red-500/10" : ""}`}
+          >
+            <div className="flex w-full items-start justify-between gap-3">
+              <div className="flex flex-col min-w-0">
+                <p className="text-xl font-black text-foreground truncate">{mesa.nombre}</p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className="flex h-2 w-2 rounded-full bg-current opacity-70"></span>
+                  <p className="text-xs uppercase tracking-[0.15em] opacity-80 font-bold">
+                    {getMesaLabel(mesa.estado)}
+                  </p>
+                </div>
+              </div>
+              <TableGraphic capacidad={mesa.capacidad} estado={mesa.estado} activa={mesa.activa} />
+            </div>
 
-              return (
-                <button
-                  key={mesa.id}
-                  type="button"
-                  onClick={() => setSelectedMesaId(mesa.id)}
-                  className={`relative flex flex-col justify-between rounded-[24px] border-[2px] p-4 text-left transition-all duration-200 ${getMesaTone(mesa)} ${seleccionada ? "ring-4 ring-orange-500/20 shadow-lg border-orange-500 scale-[1.02] z-10" : "hover:border-border hover:shadow-sm"
-                    } ${alerta ? "border-red-500/50 bg-red-500/10" : ""}`}
-                >
-                  <div className="flex w-full items-start justify-between gap-3">
-                    <div className="flex flex-col min-w-0">
-                      <p className="text-xl font-black text-foreground truncate">{mesa.nombre}</p>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <span className="flex h-2 w-2 rounded-full bg-current opacity-70"></span>
-                        <p className="text-xs uppercase tracking-[0.15em] opacity-80 font-bold">
-                          {getMesaLabel(mesa.estado)}
-                        </p>
-                      </div>
+            <div
+              className={`mt-5 w-full rounded-2xl border p-3 ${alerta ? "bg-red-500/10 border-red-500/30" : "bg-background/60 border-border/50"
+                }`}
+            >
+              {mesa.pedidoAbierto ? (
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="font-semibold text-foreground text-sm truncate max-w-[120px]">
+                      {mesa.pedidoAbierto.nombreCuenta || "Cuenta abierta"}
+                    </p>
+                    <div
+                      className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alerta
+                          ? "bg-red-500/20 text-red-700 dark:text-red-400"
+                          : "bg-muted text-muted-foreground"
+                        }`}
+                    >
+                      <Clock className="h-3 w-3" />
+                      {tiempoStr(min)}
                     </div>
-                    <TableGraphic capacidad={mesa.capacidad} estado={mesa.estado} activa={mesa.activa} />
                   </div>
+                  <div className="flex justify-between items-end border-t border-border/50 pt-2 mt-2">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {mesa.pedidoAbierto.items.length} prod · {mesa.pedidoAbierto.comensales} pax
+                    </p>
+                    <p className="text-base font-black text-foreground tracking-tight">
+                      {formatCurrency(mesa.pedidoAbierto.total)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center opacity-60 text-xs font-medium py-3">
+                  Mesa libre y disponible
+                </div>
+              )}
+            </div>
+          </button>
+        );
+      })}
 
-                  <div className={`mt-5 w-full rounded-2xl border p-3 ${alerta ? "bg-red-500/10 border-red-500/30" : "bg-background/60 border-border/50"}`}>
-                    {mesa.pedidoAbierto ? (
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-semibold text-foreground text-sm truncate max-w-[120px]">
-                            {mesa.pedidoAbierto.nombreCuenta || "Cuenta abierta"}
-                          </p>
-                          <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alerta ? "bg-red-500/20 text-red-700 dark:text-red-400" : "bg-muted text-muted-foreground"}`}>
-                            <Clock className="h-3 w-3" />
-                            {tiempoStr(min)}
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-end border-t border-border/50 pt-2 mt-2">
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {mesa.pedidoAbierto.items.length} prod · {mesa.pedidoAbierto.comensales} pax
-                          </p>
-                          <p className="text-base font-black text-foreground tracking-tight">
-                            {formatCurrency(mesa.pedidoAbierto.total)}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center opacity-60 text-xs font-medium py-3">
-                        Mesa libre y disponible
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      {/* Botón Nueva mesa al final del grid como en el bar */}
+      <button
+        type="button"
+        onClick={() => setCrearMesaOpen(true)}
+        className="flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-border bg-muted/30 p-4 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 min-h-[160px]"
+      >
+        <Plus className="h-8 w-8 mb-3 opacity-50" />
+        <span className="text-sm font-semibold">Nueva mesa</span>
+      </button>
     </div>
   );
 }
@@ -686,8 +666,8 @@ export function MeseroView() {
             <div
               key={notif.id}
               className={`w-80 rounded-2xl border shadow-2xl overflow-hidden pointer-events-auto animate-in slide-in-from-right-8 fade-in duration-300 ${notif.todoListo
-                  ? "border-emerald-500/40 bg-card"
-                  : "border-amber-500/30 bg-card"
+                ? "border-emerald-500/40 bg-card"
+                : "border-amber-500/30 bg-card"
                 }`}
             >
               {/* Barra de color */}
@@ -711,8 +691,8 @@ export function MeseroView() {
                 </p>
                 <Button
                   className={`w-full mt-3 h-9 text-xs font-bold rounded-xl text-white ${notif.todoListo
-                      ? "bg-emerald-600 hover:bg-emerald-700"
-                      : "bg-amber-500 hover:bg-amber-600"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-amber-500 hover:bg-amber-600"
                     }`}
                   onClick={() => dismissNotif(notif.id)}
                 >
