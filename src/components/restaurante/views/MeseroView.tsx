@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getEstacionPreparacionLabel,
   getEstadoPreparacionLabel,
@@ -92,10 +93,10 @@ function tiempoStr(minutos: number): string {
 function TableGraphic({ capacidad, estado, activa }: { capacidad: number; estado: EstadoMesaRestaurante; activa: boolean }) {
   const chairsCount = Math.min(Math.max(capacidad, 1), 12);
   const chairs = Array.from({ length: chairsCount });
-  
+
   let tableColor = 'border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400';
   let chairColor = 'bg-emerald-400 dark:bg-emerald-500';
-  
+
   if (estado === "OCUPADA") {
     tableColor = 'border-orange-500 bg-orange-500/20 text-orange-700 dark:text-orange-400';
     chairColor = 'bg-orange-400 dark:bg-orange-500';
@@ -114,16 +115,16 @@ function TableGraphic({ capacidad, estado, activa }: { capacidad: number; estado
     <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
       {/* Mesa Central */}
       <div className={`w-10 h-10 ${capacidad > 4 ? 'rounded-[12px]' : 'rounded-full'} border-[3px] z-10 ${tableColor} flex items-center justify-center shadow-inner transition-colors duration-300 relative`}>
-         <span className="text-xs font-black">{capacidad}</span>
-         {estado === "OCUPADA" && (
-           <div className="absolute -inset-1 rounded-[inherit] border-2 border-orange-400/40 animate-ping opacity-20 pointer-events-none" />
-         )}
+        <span className="text-xs font-black">{capacidad}</span>
+        {estado === "OCUPADA" && (
+          <div className="absolute -inset-1 rounded-[inherit] border-2 border-orange-400/40 animate-ping opacity-20 pointer-events-none" />
+        )}
       </div>
-      
+
       {/* Sillas */}
       {chairs.map((_, i) => {
         const angle = (i * 360) / chairs.length;
-        const radius = 26; 
+        const radius = 26;
         const x = Math.cos((angle * Math.PI) / 180) * radius;
         const y = Math.sin((angle * Math.PI) / 180) * radius;
         return (
@@ -193,21 +194,20 @@ function MapaMesasAgrupado() {
             </h3>
             <div className="h-px flex-1 bg-border/50" />
           </div>
-          
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {mesasZona.map((mesa) => {
               const seleccionada = mesa.id === mesaSeleccionada?.id;
               const min = mesa.pedidoAbierto ? getMinutos(mesa.pedidoAbierto.createdAt) : 0;
               const alerta = min >= 60;
-              
+
               return (
                 <button
                   key={mesa.id}
                   type="button"
                   onClick={() => setSelectedMesaId(mesa.id)}
-                  className={`relative flex flex-col justify-between rounded-[24px] border-[2px] p-4 text-left transition-all duration-200 ${getMesaTone(mesa)} ${
-                    seleccionada ? "ring-4 ring-orange-500/20 shadow-lg border-orange-500 scale-[1.02] z-10" : "hover:border-border hover:shadow-sm"
-                  } ${alerta ? "border-red-500/50 bg-red-500/10" : ""}`}
+                  className={`relative flex flex-col justify-between rounded-[24px] border-[2px] p-4 text-left transition-all duration-200 ${getMesaTone(mesa)} ${seleccionada ? "ring-4 ring-orange-500/20 shadow-lg border-orange-500 scale-[1.02] z-10" : "hover:border-border hover:shadow-sm"
+                    } ${alerta ? "border-red-500/50 bg-red-500/10" : ""}`}
                 >
                   <div className="flex w-full items-start justify-between gap-3">
                     <div className="flex flex-col min-w-0">
@@ -221,26 +221,26 @@ function MapaMesasAgrupado() {
                     </div>
                     <TableGraphic capacidad={mesa.capacidad} estado={mesa.estado} activa={mesa.activa} />
                   </div>
-                  
+
                   <div className={`mt-5 w-full rounded-2xl border p-3 ${alerta ? "bg-red-500/10 border-red-500/30" : "bg-background/60 border-border/50"}`}>
                     {mesa.pedidoAbierto ? (
                       <div>
                         <div className="flex justify-between items-center mb-1">
-                           <p className="font-semibold text-foreground text-sm truncate max-w-[120px]">
-                             {mesa.pedidoAbierto.nombreCuenta || "Cuenta abierta"}
-                           </p>
-                           <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alerta ? "bg-red-500/20 text-red-700 dark:text-red-400" : "bg-muted text-muted-foreground"}`}>
-                             <Clock className="h-3 w-3" />
-                             {tiempoStr(min)}
-                           </div>
+                          <p className="font-semibold text-foreground text-sm truncate max-w-[120px]">
+                            {mesa.pedidoAbierto.nombreCuenta || "Cuenta abierta"}
+                          </p>
+                          <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alerta ? "bg-red-500/20 text-red-700 dark:text-red-400" : "bg-muted text-muted-foreground"}`}>
+                            <Clock className="h-3 w-3" />
+                            {tiempoStr(min)}
+                          </div>
                         </div>
                         <div className="flex justify-between items-end border-t border-border/50 pt-2 mt-2">
-                           <p className="text-xs text-muted-foreground font-medium">
-                             {mesa.pedidoAbierto.items.length} prod · {mesa.pedidoAbierto.comensales} pax
-                           </p>
-                           <p className="text-base font-black text-foreground tracking-tight">
-                             {formatCurrency(mesa.pedidoAbierto.total)}
-                           </p>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            {mesa.pedidoAbierto.items.length} prod · {mesa.pedidoAbierto.comensales} pax
+                          </p>
+                          <p className="text-base font-black text-foreground tracking-tight">
+                            {formatCurrency(mesa.pedidoAbierto.total)}
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -263,7 +263,7 @@ function MapaMesasAgrupado() {
 
 function ResumenFlotante() {
   const { mesas, recargarOperativo, recargandoVista } = useRestaurante();
-  
+
   const activas = mesas.filter(m => m.activa);
   const libres = activas.filter(m => m.estado === "LIBRE").length;
   const ocupadas = activas.filter(m => m.estado === "OCUPADA").length;
@@ -277,26 +277,26 @@ function ResumenFlotante() {
             <UtensilsCrossed className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-             <h2 className="text-sm font-bold leading-none text-foreground">Servicio</h2>
-             <p className="text-[11px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">Restaurante</p>
+            <h2 className="text-sm font-bold leading-none text-foreground">Servicio</h2>
+            <p className="text-[11px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">Restaurante</p>
           </div>
         </div>
         <div className="h-8 w-px bg-border hidden sm:block" />
         <div className="hidden sm:flex items-center gap-3">
-           <Badge variant="outline" className="h-8 rounded-lg border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1.5 px-3">
-             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-             {libres} Libres
-           </Badge>
-           <Badge variant="outline" className="h-8 rounded-lg border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400 gap-1.5 px-3">
-             <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-             {ocupadas} Ocupadas
-           </Badge>
-           {otras > 0 && (
-             <Badge variant="outline" className="h-8 rounded-lg bg-muted text-muted-foreground gap-1.5 px-3">
-               <span className="h-2 w-2 rounded-full bg-current" />
-               {otras} Otras
-             </Badge>
-           )}
+          <Badge variant="outline" className="h-8 rounded-lg border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1.5 px-3">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {libres} Libres
+          </Badge>
+          <Badge variant="outline" className="h-8 rounded-lg border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400 gap-1.5 px-3">
+            <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+            {ocupadas} Ocupadas
+          </Badge>
+          {otras > 0 && (
+            <Badge variant="outline" className="h-8 rounded-lg bg-muted text-muted-foreground gap-1.5 px-3">
+              <span className="h-2 w-2 rounded-full bg-current" />
+              {otras} Otras
+            </Badge>
+          )}
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={() => recargarOperativo()} disabled={recargandoVista} className="h-9 rounded-xl border-border bg-card">
@@ -338,9 +338,9 @@ function PanelPedido() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-               <Badge className="bg-orange-600 text-white hover:bg-orange-700 uppercase tracking-widest text-[10px] px-2 py-0">
-                 Mesa Activa
-               </Badge>
+              <Badge className="bg-orange-600 text-white hover:bg-orange-700 uppercase tracking-widest text-[10px] px-2 py-0">
+                Mesa Activa
+              </Badge>
             </div>
             <CardTitle className="text-3xl font-black tracking-tight text-foreground">
               {mesaSeleccionada?.nombre || "Ninguna seleccionada"}
@@ -363,7 +363,7 @@ function PanelPedido() {
             <Button variant="outline" size="sm" className="h-9" onClick={() => setUnirMesasOpen(true)} disabled={!pedidoActivo}>
               <Users className="mr-2 h-4 w-4 text-muted-foreground" /> Unir
             </Button>
-            
+
             {/* Desunir */}
             {pedidoActivo && pedidoActivo.mesas.length > 1 ? (
               <div className="relative">
@@ -386,7 +386,7 @@ function PanelPedido() {
             ) : (
               <div /> // placeholder for grid
             )}
-            
+
             <Button className="col-span-2 sm:col-span-3 h-10 bg-orange-600 hover:bg-orange-700 text-white font-bold" onClick={() => setFacturarOpen(true)} disabled={!pedidoActivo || pedidoActivo.items.length === 0}>
               <CreditCard className="mr-2 h-4 w-4" /> Cobrar {pedidoActivo && `· ${formatCurrency(pedidoActivo.total)}`}
             </Button>
@@ -474,11 +474,11 @@ function PanelPedido() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
-                           <span className="bg-muted px-2 py-0.5 rounded-md font-medium">{formatCurrency(item.precioUnitario)}</span>
-                           {item.notas && <span className="text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-md truncate max-w-[150px]">📝 {item.notas}</span>}
+                          <span className="bg-muted px-2 py-0.5 rounded-md font-medium">{formatCurrency(item.precioUnitario)}</span>
+                          {item.notas && <span className="text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-md truncate max-w-[150px]">📝 {item.notas}</span>}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-auto w-full border-t sm:border-0 border-border pt-3 sm:pt-0 mt-2 sm:mt-0">
                         <p className="font-black text-lg text-foreground w-24 text-right tabular-nums">{formatCurrency(item.subtotal)}</p>
                         <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1">
@@ -497,7 +497,7 @@ function PanelPedido() {
                   ))
                 )}
               </div>
-              
+
               {/* Totales fijos abajo */}
               <div className="bg-foreground text-background p-5">
                 <div className="flex justify-between items-center text-sm opacity-70 mb-1">
@@ -509,8 +509,8 @@ function PanelPedido() {
                   <span className="tabular-nums">{formatCurrency(pedidoActivo.impuesto)}</span>
                 </div>
                 <div className="flex justify-between items-end">
-                   <span className="text-sm font-semibold uppercase tracking-widest opacity-90">Total</span>
-                   <span className="text-3xl font-black tabular-nums tracking-tight">{formatCurrency(pedidoActivo.total)}</span>
+                  <span className="text-sm font-semibold uppercase tracking-widest opacity-90">Total</span>
+                  <span className="text-3xl font-black tabular-nums tracking-tight">{formatCurrency(pedidoActivo.total)}</span>
                 </div>
               </div>
             </div>
@@ -590,12 +590,12 @@ function CatalogoProductos() {
                   <p className="font-bold text-foreground text-sm leading-tight line-clamp-2">{producto.nombre}</p>
                 </div>
                 <div className="mt-4 w-full pt-3 border-t border-border/50 flex items-end justify-between">
-                   <p className="text-lg font-black text-foreground tracking-tight">
-                     {producto.precio != null ? formatCurrency(producto.precio) : "---"}
-                   </p>
-                   <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                     Stock: {producto.enStock}
-                   </span>
+                  <p className="text-lg font-black text-foreground tracking-tight">
+                    {producto.precio != null ? formatCurrency(producto.precio) : "---"}
+                  </p>
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    Stock: {producto.enStock}
+                  </span>
                 </div>
               </button>
             ))}
@@ -618,9 +618,19 @@ interface NotifItem {
 }
 
 export function MeseroView() {
-  const { mesas } = useRestaurante();
+  const { mesas, mesaSeleccionada } = useRestaurante();
   const prevItemStatusRef = useRef<Record<string, string>>({});
   const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
+  const [activeTab, setActiveTab] = useState("mesas");
+
+  // Auto-switch to pedido tab when a table is selected
+  useEffect(() => {
+    if (mesaSeleccionada) {
+      setActiveTab("pedido");
+    } else {
+      setActiveTab("mesas");
+    }
+  }, [mesaSeleccionada]);
 
   // Detecta cambios de estado ítem por ítem
   useEffect(() => {
@@ -675,11 +685,10 @@ export function MeseroView() {
           {notificaciones.map((notif) => (
             <div
               key={notif.id}
-              className={`w-80 rounded-2xl border shadow-2xl overflow-hidden pointer-events-auto animate-in slide-in-from-right-8 fade-in duration-300 ${
-                notif.todoListo
+              className={`w-80 rounded-2xl border shadow-2xl overflow-hidden pointer-events-auto animate-in slide-in-from-right-8 fade-in duration-300 ${notif.todoListo
                   ? "border-emerald-500/40 bg-card"
                   : "border-amber-500/30 bg-card"
-              }`}
+                }`}
             >
               {/* Barra de color */}
               <div className={`px-4 py-2 flex items-center gap-2 ${notif.todoListo ? "bg-emerald-600" : "bg-amber-500"}`}>
@@ -701,11 +710,10 @@ export function MeseroView() {
                   )}
                 </p>
                 <Button
-                  className={`w-full mt-3 h-9 text-xs font-bold rounded-xl text-white ${
-                    notif.todoListo
+                  className={`w-full mt-3 h-9 text-xs font-bold rounded-xl text-white ${notif.todoListo
                       ? "bg-emerald-600 hover:bg-emerald-700"
                       : "bg-amber-500 hover:bg-amber-600"
-                  }`}
+                    }`}
                   onClick={() => dismissNotif(notif.id)}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -717,7 +725,8 @@ export function MeseroView() {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[400px_1fr] 2xl:grid-cols-[480px_1fr]">
+      {/* ── DESKTOP: layout lado a lado (xl+) ─────────────────────────────── */}
+      <div className="hidden xl:grid gap-6 xl:grid-cols-[400px_1fr] 2xl:grid-cols-[480px_1fr]">
         {/* Panel izquierdo: mapa de mesas agrupado por zona */}
         <Card className="overflow-hidden border-border bg-card/50 shadow-sm self-start sticky top-[100px] max-h-[calc(100vh-120px)] flex flex-col">
           <CardHeader className="border-b border-border bg-card p-5 shrink-0">
@@ -736,6 +745,65 @@ export function MeseroView() {
           <PanelPedido />
           <CatalogoProductos />
         </div>
+      </div>
+
+      {/* ── MOBILE / TABLET: navegación por tabs (hasta lg) ──────────────── */}
+      <div className="xl:hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4 h-auto p-1 bg-border/60 rounded-xl">
+            <TabsTrigger
+              value="mesas"
+              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-card data-[state=active]:text-orange-600 data-[state=active]:shadow-sm"
+            >
+              <Armchair className="h-5 w-5" />
+              <span className="font-semibold text-sm">Mesas</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="pedido"
+              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-card data-[state=active]:text-orange-600 data-[state=active]:shadow-sm"
+              disabled={!mesaSeleccionada}
+            >
+              <Receipt className="h-5 w-5" />
+              <span className="font-semibold text-sm">Pedido</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="catalogo"
+              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-card data-[state=active]:text-orange-600 data-[state=active]:shadow-sm"
+              disabled={!mesaSeleccionada}
+            >
+              <UtensilsCrossed className="h-5 w-5" />
+              <span className="font-semibold text-sm">Carta</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="mesas" className="mt-0">
+            <Card className="overflow-hidden border-border shadow-sm">
+              <CardContent className="p-3 sm:p-4">
+                <MapaMesasAgrupado />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pedido" className="mt-0">
+            {mesaSeleccionada ? (
+              <PanelPedido />
+            ) : (
+              <div className="text-center p-8 text-muted-foreground rounded-xl border border-dashed border-border bg-card">
+                Selecciona una mesa primero
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="catalogo" className="mt-0">
+            {mesaSeleccionada ? (
+              <CatalogoProductos />
+            ) : (
+              <div className="text-center p-8 text-muted-foreground rounded-xl border border-dashed border-border bg-card">
+                Selecciona una mesa primero
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

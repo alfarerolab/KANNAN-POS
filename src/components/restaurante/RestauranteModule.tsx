@@ -154,12 +154,12 @@ function DialogsGlobales() {
 
   useEffect(() => {
     if (dividirCuentaOpen && pedidoActivo) {
-       // Reset pagos fraccionados when modal opens
-       const initialPagos = Array(divisionPersonas).fill(null).map(() => ({
-         metodoPago: "EFECTIVO",
-         monto: divisionIgual.valorPorPersona
-       }));
-       setPagosFraccionados(initialPagos);
+      // Reset pagos fraccionados when modal opens
+      const initialPagos = Array(divisionPersonas).fill(null).map(() => ({
+        metodoPago: "EFECTIVO",
+        monto: divisionIgual.valorPorPersona
+      }));
+      setPagosFraccionados(initialPagos);
     }
   }, [dividirCuentaOpen, pedidoActivo, divisionPersonas, divisionIgual.valorPorPersona]);
 
@@ -298,7 +298,7 @@ function DialogsGlobales() {
               );
             })}
             <Button className="w-full" disabled={mesasParaUnir.length === 0 || uniendoMesas} onClick={unirMesasHandler}>{uniendoMesas ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Users className="mr-2 h-4 w-4" />}Consolidar mesas seleccionadas</Button>
-            
+
             {pedidoActivo && pedidoActivo.mesas.length > 1 && (
               <div className="pt-4 border-t border-border mt-4">
                 <p className="text-sm font-semibold text-destructive">Desunir una mesa</p>
@@ -311,11 +311,10 @@ function DialogsGlobales() {
                         <button
                           key={mp.mesa.id}
                           type="button"
-                          className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition ${
-                            isSelected
+                          className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition ${isSelected
                               ? "border-destructive/40 bg-destructive/10"
                               : "border-border hover:border-border"
-                          }`}
+                            }`}
                           onClick={() => setDesunirMesaId(isSelected ? "sin-mesa" : mp.mesa.id)}
                         >
                           <p className="font-medium text-foreground">{mp.mesa.nombre}</p>
@@ -432,14 +431,14 @@ function DialogsGlobales() {
                     </div>
                   ))}
                   <div className="flex justify-between items-center px-2 text-sm text-muted-foreground">
-                     <span>Total recolectado: {formatCurrency(pagosFraccionados.reduce((acc, p) => acc + p.monto, 0))}</span>
-                     <span className={pagosFraccionados.reduce((acc, p) => acc + p.monto, 0) < Number(pedidoActivo.total) ? "text-red-500" : "text-emerald-500"}>
-                       Falta: {formatCurrency(Math.max(0, Number(pedidoActivo.total) - pagosFraccionados.reduce((acc, p) => acc + p.monto, 0)))}
-                     </span>
+                    <span>Total recolectado: {formatCurrency(pagosFraccionados.reduce((acc, p) => acc + p.monto, 0))}</span>
+                    <span className={pagosFraccionados.reduce((acc, p) => acc + p.monto, 0) < Number(pedidoActivo.total) ? "text-red-500" : "text-emerald-500"}>
+                      Falta: {formatCurrency(Math.max(0, Number(pedidoActivo.total) - pagosFraccionados.reduce((acc, p) => acc + p.monto, 0)))}
+                    </span>
                   </div>
                 </div>
                 <Button className="w-full" disabled={dividiendoCuenta || pagosFraccionados.reduce((acc, p) => acc + p.monto, 0) < Number(pedidoActivo.total)} onClick={() => facturarFraccionadoHandler(pagosFraccionados as any)}>
-                   {dividiendoCuenta ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}Cobrar {divisionPersonas} fracciones simultáneas
+                  {dividiendoCuenta ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}Cobrar {divisionPersonas} fracciones simultáneas
                 </Button>
               </TabsContent>
               <TabsContent value="productos" className="mt-4 space-y-4">
@@ -463,7 +462,7 @@ function DialogsGlobales() {
                     <div key={String(label)} className="rounded-3xl border border-border bg-muted/50 p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold text-foreground">{formatCurrency(Number(val))}</p></div>
                   ))}
                 </div>
-                
+
                 <div className="space-y-4 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 mt-4">
                   <div className="space-y-2">
                     <Label>Método de pago (Sub-cuenta seleccionada)</Label>
@@ -529,7 +528,7 @@ function RestauranteContenido() {
   return (
     <div className="space-y-6">
       <RestauranteHeader />
-      {rolVista === "mesero" && (<><div className="flex justify-end"><Button className="bg-background text-primary-foreground hover:bg-card" onClick={() => setCrearMesaOpen(true)}><Plus className="mr-2 h-4 w-4" />Nueva mesa</Button></div><MeseroView /></>)}
+      {rolVista === "mesero" && (<><div className="flex justify-end"><Button className="bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-sm" onClick={() => setCrearMesaOpen(true)}><Plus className="mr-2 h-4 w-4" />Nueva mesa</Button></div><MeseroView /></>)}
       {rolVista === "cocina" && <CocinaView />}
       {rolVista === "caja" && <CajaView />}
       <DialogsGlobales />
