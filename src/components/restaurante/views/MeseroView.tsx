@@ -242,13 +242,7 @@ function MapaMesasAgrupado() {
 // ─── Resumen Flotante Superior ────────────────────────────────────────────────
 
 function ResumenFlotante() {
-<<<<<<< HEAD
-  const { mesas, recargarOperativo, recargandoVista } = useRestaurante();
-
-=======
   const { mesas, recargarOperativo, recargandoVista, setCrearMesaOpen } = useRestaurante();
-  
->>>>>>> d4bc8df (feat: modulo de domicilios, costo empaques y solucion mesa restaurante)
   const activas = mesas.filter(m => m.activa);
   const libres = activas.filter(m => m.estado === "LIBRE").length;
   const ocupadas = activas.filter(m => m.estado === "OCUPADA").length;
@@ -707,11 +701,7 @@ interface NotifItem {
 }
 
 export function MeseroView() {
-<<<<<<< HEAD
-  const { mesas, mesaSeleccionada } = useRestaurante();
-=======
-  const { mesas, setCrearMesaOpen } = useRestaurante();
->>>>>>> d4bc8df (feat: modulo de domicilios, costo empaques y solucion mesa restaurante)
+  const { mesas, mesaSeleccionada, setCrearMesaOpen } = useRestaurante();
   const prevItemStatusRef = useRef<Record<string, string>>({});
   const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
   const [activeTab, setActiveTab] = useState("mesas");
