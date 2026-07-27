@@ -474,6 +474,7 @@ export function DraggableProductGrid({
               const isSelected = categoriaSeleccionada === categoria.id;
               const colorClass = getCategoriaColor(categoria, isSelected);
               const icon = getCategoriaIcon(categoria);
+              const count = categoria._count?.productos ?? productos.filter((p: any) => p.categoriaId === categoria.id || p.categoria?.id === categoria.id || p.categoria?.nombre?.toUpperCase() === categoria.nombre?.toUpperCase()).length;
 
               return (
                 <Button
@@ -500,7 +501,7 @@ export function DraggableProductGrid({
                       {categoria.nombre}
                     </span>
                     <span className="text-xs opacity-70">
-                      {categoria._count?.productos || 0} productos
+                      {count}
                     </span>
                   </div>
                 </Button>

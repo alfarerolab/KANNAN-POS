@@ -242,8 +242,13 @@ function MapaMesasAgrupado() {
 // ─── Resumen Flotante Superior ────────────────────────────────────────────────
 
 function ResumenFlotante() {
+<<<<<<< HEAD
   const { mesas, recargarOperativo, recargandoVista } = useRestaurante();
 
+=======
+  const { mesas, recargarOperativo, recargandoVista, setCrearMesaOpen } = useRestaurante();
+  
+>>>>>>> d4bc8df (feat: modulo de domicilios, costo empaques y solucion mesa restaurante)
   const activas = mesas.filter(m => m.activa);
   const libres = activas.filter(m => m.estado === "LIBRE").length;
   const ocupadas = activas.filter(m => m.estado === "OCUPADA").length;
@@ -279,10 +284,19 @@ function ResumenFlotante() {
           )}
         </div>
       </div>
-      <Button variant="outline" size="sm" onClick={() => recargarOperativo()} disabled={recargandoVista} className="h-9 rounded-xl border-border bg-card">
-        {recargandoVista ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-        Actualizar
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={() => setCrearMesaOpen(true)}
+          className="h-9 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-md gap-1.5"
+        >
+          <Plus className="h-4 w-4" />
+          Nueva Mesa
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => recargarOperativo()} disabled={recargandoVista} className="h-9 rounded-xl border-border bg-card">
+          {recargandoVista ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          Actualizar
+        </Button>
+      </div>
     </div>
   );
 }
@@ -411,6 +425,89 @@ function PanelPedido() {
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Tipo de servicio</Label>
+              <Select
+                value={cuentaForm.tipoServicio}
+                onValueChange={(val) => {
+                  const nuevoCostoEmpaque = val !== "MESA" && cuentaForm.costoEmpaque === 0 ? 1500 : (val === "MESA" ? 0 : cuentaForm.costoEmpaque);
+                  setCuentaForm((prev) => ({
+                    ...prev,
+                    tipoServicio: val,
+                    costoEmpaque: nuevoCostoEmpaque,
+                  }));
+                }}
+                disabled={!pedidoActivo}
+              >
+                <SelectTrigger className="h-10 bg-muted/50 font-medium">
+                  <SelectValue placeholder="Comer en Mesa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MESA">🍽️ Comer en Mesa</SelectItem>
+                  <SelectItem value="LLEVAR">📦 Para Llevar</SelectItem>
+                  <SelectItem value="DOMICILIO">🛵 Domicilio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {cuentaForm.tipoServicio !== "MESA" && (
+              <div className="space-y-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                    🍱 Costo Recipiente / Empaque ($)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={cuentaForm.costoEmpaque}
+                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoEmpaque: Number(e.target.value || 0) }))}
+                    disabled={!pedidoActivo}
+                    className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                  />
+                </div>
+
+                {cuentaForm.tipoServicio === "DOMICILIO" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                        🛵 Costo Envío / Domicilio ($)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={500}
+                        value={cuentaForm.costoDomicilio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoDomicilio: Number(e.target.value || 0) }))}
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Dirección de Entrega</Label>
+                      <Input
+                        value={cuentaForm.direccionEnvio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, direccionEnvio: e.target.value }))}
+                        placeholder="Calle / Carrera #..."
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Teléfono Contacto</Label>
+                      <Input
+                        value={cuentaForm.telefonoEnvio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, telefonoEnvio: e.target.value }))}
+                        placeholder="300 000 0000"
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background text-xs"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Notas generales</Label>
               <Textarea value={cuentaForm.notas} onChange={(e) => setCuentaForm((prev) => ({ ...prev, notas: e.target.value }))} disabled={!pedidoActivo} className="resize-none bg-muted/50" rows={2} />
             </div>
@@ -481,9 +578,21 @@ function PanelPedido() {
               {/* Totales fijos abajo */}
               <div className="bg-foreground text-background p-5">
                 <div className="flex justify-between items-center text-sm opacity-70 mb-1">
-                  <span>Subtotal</span>
+                  <span>Subtotal Platos</span>
                   <span className="tabular-nums">{formatCurrency(pedidoActivo.subtotal)}</span>
                 </div>
+                {Boolean(pedidoActivo.costoEmpaque) && (
+                  <div className="flex justify-between items-center text-sm opacity-90 text-amber-300 mb-1">
+                    <span>🍱 Empaque / Recipiente</span>
+                    <span className="tabular-nums font-bold">+{formatCurrency(pedidoActivo.costoEmpaque || 0)}</span>
+                  </div>
+                )}
+                {Boolean(pedidoActivo.costoDomicilio) && (
+                  <div className="flex justify-between items-center text-sm opacity-90 text-sky-300 mb-1">
+                    <span>🛵 Envío Domicilio</span>
+                    <span className="tabular-nums font-bold">+{formatCurrency(pedidoActivo.costoDomicilio || 0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-sm opacity-70 mb-3 border-b border-background/20 pb-3">
                   <span>Impuestos</span>
                   <span className="tabular-nums">{formatCurrency(pedidoActivo.impuesto)}</span>
@@ -598,7 +707,11 @@ interface NotifItem {
 }
 
 export function MeseroView() {
+<<<<<<< HEAD
   const { mesas, mesaSeleccionada } = useRestaurante();
+=======
+  const { mesas, setCrearMesaOpen } = useRestaurante();
+>>>>>>> d4bc8df (feat: modulo de domicilios, costo empaques y solucion mesa restaurante)
   const prevItemStatusRef = useRef<Record<string, string>>({});
   const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
   const [activeTab, setActiveTab] = useState("mesas");
@@ -709,11 +822,19 @@ export function MeseroView() {
       <div className="hidden xl:grid gap-6 xl:grid-cols-[400px_1fr] 2xl:grid-cols-[480px_1fr]">
         {/* Panel izquierdo: mapa de mesas agrupado por zona */}
         <Card className="overflow-hidden border-border bg-card/50 shadow-sm self-start sticky top-[100px] max-h-[calc(100vh-120px)] flex flex-col">
-          <CardHeader className="border-b border-border bg-card p-5 shrink-0">
+          <CardHeader className="border-b border-border bg-card p-5 shrink-0 flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-xl font-bold">
               <Armchair className="h-6 w-6 text-orange-500" />
               Zonas y Mesas
             </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => setCrearMesaOpen(true)}
+              className="h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold gap-1 rounded-xl shadow-sm px-3"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              + Mesa
+            </Button>
           </CardHeader>
           <CardContent className="p-5 overflow-y-auto">
             <MapaMesasAgrupado />

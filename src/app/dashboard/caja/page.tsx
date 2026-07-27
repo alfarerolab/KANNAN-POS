@@ -282,7 +282,26 @@ export default function CajaPage() {
     if (!session) return;
     setCargandoGastos(true);
     try {
-      const { desde, hasta } = calcularRangoFechas(periodoGastos, fechaDesdeGastos, fechaHastaGastos);
+      let desde: Date, hasta: Date;
+      if (periodoGastos === "personalizado" && fechaDesdeGastos && fechaHastaGastos) {
+        const [y1, m1, d1] = fechaDesdeGastos.split("-").map(Number);
+        desde = new Date(Date.UTC(y1, m1 - 1, d1, 0, 0, 0, 0));
+        
+        const [y2, m2, d2] = fechaHastaGastos.split("-").map(Number);
+        hasta = new Date(Date.UTC(y2, m2 - 1, d2, 23, 59, 59, 999));
+      } else if (periodoGastos !== "personalizado") {
+        const rango = calcularRangoFechas(periodoGastos, "", "");
+        const y1 = rango.desde.getFullYear();
+        const m1 = rango.desde.getMonth();
+        const d1 = rango.desde.getDate();
+        desde = new Date(Date.UTC(y1, m1, d1, 0, 0, 0, 0));
+        
+        const y2 = rango.hasta.getFullYear();
+        const m2 = rango.hasta.getMonth();
+        const d2 = rango.hasta.getDate();
+        hasta = new Date(Date.UTC(y2, m2, d2, 23, 59, 59, 999));
+      } else return;
+
       const params = new URLSearchParams({
         desde: desde.toISOString(),
         hasta: hasta.toISOString(),
@@ -409,7 +428,7 @@ export default function CajaPage() {
 
     dataToExport.forEach(c => {
       const row = [
-        format(new Date(c.fecha), "dd/MM/yyyy HH:mm"),
+        formatFechaLocal(c.fecha, true),
         `"${c.cliente.replace(/"/g, '""')}"`,
         `"${c.cobrador.replace(/"/g, '""')}"`,
         `"${c.caja.replace(/"/g, '""')}"`,
@@ -447,7 +466,7 @@ export default function CajaPage() {
 
     dataToExport.forEach(g => {
       const row = [
-        format(new Date(g.fecha), "dd/MM/yyyy"),
+        formatFechaLocal(g.fecha),
         `"${g.concepto.replace(/"/g, '""')}"`,
         `"${g.categoria.nombre.replace(/"/g, '""')}"`,
         `"${g.metodoPago || "Efectivo"}"`,
@@ -464,6 +483,28 @@ export default function CajaPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Localized Date Formatter to avoid timezone offset shifts (e.g. Colombian GMT-5)
+  const formatFechaLocal = (fechaStr: string | Date | null | undefined, incluirHora = false): string => {
+    if (!fechaStr) return "N/A";
+    const str = typeof fechaStr === "string" ? fechaStr : fechaStr.toISOString();
+    
+    // Extract YYYY-MM-DD
+    const datePart = str.substring(0, 10);
+    const parts = datePart.split("-").map(Number);
+    if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+      return "N/A";
+    }
+    const [year, month, day] = parts;
+    
+    if (!incluirHora || str.includes("T00:00:00")) {
+      const date = new Date(year, month - 1, day);
+      return format(date, "dd/MM/yyyy");
+    }
+
+    const d = new Date(str);
+    return format(d, "dd/MM/yyyy HH:mm");
   };
 
   // Currency Formatter
@@ -758,7 +799,7 @@ export default function CajaPage() {
                         onClick={() => verDetalleMovimiento(m.id, m.ventaId)}
                       >
                         <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap">
-                          {format(new Date(m.fecha), "dd/MM/yyyy HH:mm")}
+                          {formatFechaLocal(m.fecha, true)}
                         </TableCell>
                         <TableCell className="py-4 px-6 font-semibold text-foreground">
                           {m.cliente}
@@ -1009,7 +1050,7 @@ export default function CajaPage() {
                           />
                         </TableCell>
                         <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
-                          {format(new Date(c.fecha), "dd/MM/yyyy HH:mm")}
+                          {formatFechaLocal(c.fecha, true)}
                         </TableCell>
                         <TableCell className="py-4 px-6 font-semibold text-foreground cursor-pointer" onClick={() => verDetalleMovimiento(c.id)}>
                           {c.cliente}
@@ -1176,7 +1217,7 @@ export default function CajaPage() {
                           />
                         </TableCell>
                         <TableCell className="py-4 px-6 text-sm font-medium whitespace-nowrap">
-                          {format(new Date(g.fecha), "dd/MM/yyyy")}
+                          {formatFechaLocal(g.fecha)}
                         </TableCell>
                         <TableCell className="py-4 px-6 font-semibold text-foreground">
                           {g.concepto}
@@ -1376,7 +1417,7 @@ export default function CajaPage() {
                   <div>
                     <span className="text-xs text-muted-foreground block">Fecha</span>
                     <span className="font-medium">
-                      {detalleMovimiento.fecha ? format(new Date(detalleMovimiento.fecha), "dd/MM/yyyy") : "N/A"}
+                      {formatFechaLocal(detalleMovimiento.fecha)}
                     </span>
                   </div>
                   <div>
@@ -1410,7 +1451,7 @@ export default function CajaPage() {
                   <div>
                     <span className="text-xs text-muted-foreground block">Fecha / Hora</span>
                     <span className="font-semibold text-foreground">
-                      {format(new Date(detalleMovimiento.createdAt), "dd/MM/yyyy HH:mm")}
+                      {formatFechaLocal(detalleMovimiento.createdAt, true)}
                     </span>
                   </div>
                   <div>

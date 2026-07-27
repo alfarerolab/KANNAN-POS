@@ -31,6 +31,11 @@ interface PropiedadesTicket {
   formatoPapel?: "58mm" | "80mm";
   // Nueva prop para pagos múltiples
   pagosMultiples?: PagoDetalle[];
+  tipoServicio?: string;
+  costoEmpaque?: number;
+  costoDomicilio?: number;
+  direccionEnvio?: string;
+  telefonoEnvio?: string;
 }
 
 // Métodos de pago para mostrar nombres legibles
@@ -63,7 +68,12 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
     empresaLogo,
     mostrarLogo = true,
     formatoPapel = "80mm",
-    pagosMultiples
+    pagosMultiples,
+    tipoServicio,
+    costoEmpaque = 0,
+    costoDomicilio = 0,
+    direccionEnvio,
+    telefonoEnvio,
   }, ref) => {
     
     const [logoError, setLogoError] = useState(false);
@@ -262,6 +272,30 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
                   </td>
                 </tr>
               )}
+              {tipoServicio && tipoServicio !== "MESA" && (
+                <tr>
+                  <td style={{ paddingBottom: "2px" }}>Servicio:</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold", paddingBottom: "2px" }}>
+                    {tipoServicio === "LLEVAR" ? "📦 PARA LLEVAR" : "🛵 DOMICILIO"}
+                  </td>
+                </tr>
+              )}
+              {direccionEnvio && (
+                <tr>
+                  <td style={{ paddingBottom: "2px" }}>Dirección:</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold", paddingBottom: "2px" }}>
+                    {direccionEnvio}
+                  </td>
+                </tr>
+              )}
+              {telefonoEnvio && (
+                <tr>
+                  <td style={{ paddingBottom: "2px" }}>Teléfono:</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold", paddingBottom: "2px" }}>
+                    {telefonoEnvio}
+                  </td>
+                </tr>
+              )}
               
               {/* Mostrar método de pago único o múltiple */}
               {!esPagoMultiple ? (
@@ -411,6 +445,26 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
                   {formatCurrency(subtotal)}
                 </td>
               </tr>
+
+              {/* Costo Empaque */}
+              {costoEmpaque > 0 && (
+                <tr>
+                  <td style={{ paddingBottom: "3px" }}>Empaque / Recipiente:</td>
+                  <td style={{ textAlign: "right", paddingBottom: "3px", whiteSpace: "nowrap" }}>
+                    +{formatCurrency(costoEmpaque)}
+                  </td>
+                </tr>
+              )}
+
+              {/* Costo Domicilio */}
+              {costoDomicilio > 0 && (
+                <tr>
+                  <td style={{ paddingBottom: "3px" }}>Envío Domicilio:</td>
+                  <td style={{ textAlign: "right", paddingBottom: "3px", whiteSpace: "nowrap" }}>
+                    +{formatCurrency(costoDomicilio)}
+                  </td>
+                </tr>
+              )}
 
               {/* IVA desglosado */}
               {Object.entries(ivasAgrupados).map(([tarifa, valor]) => (

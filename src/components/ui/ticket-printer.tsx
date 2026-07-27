@@ -21,11 +21,17 @@ interface TicketData {
   cliente?: any;
   items: any[];
   subtotal: number;
+  costoEmpaque?: number;
+  costoDomicilio?: number;
+  tipoServicio?: string;
+  direccionEnvio?: string;
+  telefonoEnvio?: string;
   impuesto: number;
   total: number;
   metodoPago: string;
   terminal?: any;
   usuario?: any;
+  pagosMultiples?: any[];
 }
 
 interface TicketPrinterProps {
@@ -520,6 +526,11 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
               fecha={new Date(fechaVenta)}
               items={ticketData.items}
               subtotal={ticketData.subtotal}
+              costoEmpaque={ticketData.costoEmpaque ?? ticketData.venta?.costoEmpaque}
+              costoDomicilio={ticketData.costoDomicilio ?? ticketData.venta?.costoDomicilio}
+              tipoServicio={ticketData.tipoServicio ?? ticketData.venta?.tipoServicio}
+              direccionEnvio={ticketData.direccionEnvio ?? ticketData.venta?.direccionEnvio}
+              telefonoEnvio={ticketData.telefonoEnvio ?? ticketData.venta?.telefonoEnvio}
               impuesto={ticketData.impuesto}
               total={ticketData.total}
               metodoPago={ticketData.metodoPago}
@@ -532,6 +543,7 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
               empresaLogo={incluirLogo ? logoParaTicket : null}
               mostrarLogo={incluirLogo && tieneLogoDisponible}
               formatoPapel={formatoPapel}
+              pagosMultiples={ticketData.pagosMultiples}
             />
           </div>
 

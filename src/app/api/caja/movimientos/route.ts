@@ -68,10 +68,14 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 2. Obtener todos los gastos registrados hoy
+    // 2. Obtener todos los gastos registrados hoy (utilizando límites UTC para fechas sin hora)
+    const [yGasto, mGasto, dGasto] = fechaFiltro.split("-").map(Number);
+    const inicioGasto = new Date(Date.UTC(yGasto, mGasto - 1, dGasto, 0, 0, 0, 0));
+    const finGasto = new Date(Date.UTC(yGasto, mGasto - 1, dGasto, 23, 59, 59, 999));
+
     const whereGasto: any = {
       empresaId,
-      fecha: { gte: inicio, lte: fin },
+      fecha: { gte: inicioGasto, lte: finGasto },
     };
     if (cajasIds.length > 0) {
       whereGasto.cajaId = { in: cajasIds };

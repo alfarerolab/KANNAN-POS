@@ -265,9 +265,12 @@ export async function POST(req: NextRequest) {
           estado: "COMPLETADA",
           empresaId,
           usuarioId,
-          clienteId: clienteId || null,
-          notas: notas || null,
           cajaId: cajaId || null,
+          tipoServicio: datos.tipoServicio || "MESA",
+          costoEmpaque: datos.costoEmpaque ? new Decimal(datos.costoEmpaque) : new Decimal(0),
+          costoDomicilio: datos.costoDomicilio ? new Decimal(datos.costoDomicilio) : new Decimal(0),
+          direccionEnvio: datos.direccionEnvio || null,
+          telefonoEnvio: datos.telefonoEnvio || null,
           // Campos para ventas fiadas
           esVentaFiada,
           ...(esVentaFiada && {

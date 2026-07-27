@@ -129,6 +129,17 @@ export async function PATCH(req: NextRequest, context: ContextoRuta) {
       );
     }
 
+    const tipoServicio = body.tipoServicio !== undefined ? String(body.tipoServicio) : undefined;
+    const costoEmpaque = body.costoEmpaque !== undefined ? Number(body.costoEmpaque) : undefined;
+    const costoDomicilio = body.costoDomicilio !== undefined ? Number(body.costoDomicilio) : undefined;
+    const direccionEnvio = body.direccionEnvio !== undefined ? (body.direccionEnvio ? String(body.direccionEnvio) : null) : undefined;
+    const telefonoEnvio = body.telefonoEnvio !== undefined ? (body.telefonoEnvio ? String(body.telefonoEnvio) : null) : undefined;
+
+    const nuevoCostoEmpaque = costoEmpaque !== undefined ? costoEmpaque : Number(pedido.costoEmpaque || 0);
+    const nuevoCostoDomicilio = costoDomicilio !== undefined ? costoDomicilio : Number(pedido.costoDomicilio || 0);
+    const nuevoSubtotal = Number(pedido.subtotal || 0);
+    const nuevoTotal = nuevoSubtotal + nuevoCostoEmpaque + nuevoCostoDomicilio;
+
     const pedidoActualizado = await db.pedidoRestaurante.update({
       where: { id: pedido.id },
       data: {
@@ -136,6 +147,12 @@ export async function PATCH(req: NextRequest, context: ContextoRuta) {
         notas,
         comensales,
         clienteId,
+        ...(tipoServicio !== undefined && { tipoServicio }),
+        ...(costoEmpaque !== undefined && { costoEmpaque: nuevoCostoEmpaque }),
+        ...(costoDomicilio !== undefined && { costoDomicilio: nuevoCostoDomicilio }),
+        ...(direccionEnvio !== undefined && { direccionEnvio }),
+        ...(telefonoEnvio !== undefined && { telefonoEnvio }),
+        total: nuevoTotal,
       },
       include: pedidoRestauranteInclude,
     });

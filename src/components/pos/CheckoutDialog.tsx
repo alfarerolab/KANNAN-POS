@@ -30,6 +30,14 @@ export interface PagoDetalle {
   referencia?: string;
 }
 
+export interface DatosEnvio {
+  tipoServicio: string;
+  costoEmpaque: number;
+  costoDomicilio: number;
+  direccionEnvio: string;
+  telefonoEnvio: string;
+}
+
 interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,9 +52,9 @@ interface CheckoutDialogProps {
   totalItems: number;
   formatearMoneda: (valor: number) => string;
   procesandoVenta: boolean;
-  onProcesarVenta: (referencia?: string, cajaId?: string) => void;
+  onProcesarVenta: (referencia?: string, cajaId?: string, datosEnvio?: DatosEnvio) => void;
   // Nuevas props para pagos múltiples
-  onProcesarVentaMultiple?: (pagos: PagoDetalle[], cajaId?: string) => void;
+  onProcesarVentaMultiple?: (pagos: PagoDetalle[], cajaId?: string, datosEnvio?: DatosEnvio) => void;
 }
 
 export function CheckoutDialog({
@@ -90,9 +98,18 @@ export function CheckoutDialog({
   // Estados para ventas a crédito (FIADO)
   const [diasCredito, setDiasCredito] = useState<string>("30");
 
+  // Estados para tipo de servicio (Mesa, Para Llevar, Domicilio) y empaques
+  const [tipoServicio, setTipoServicio] = useState<string>("MESA");
+  const [costoEmpaque, setCostoEmpaque] = useState<number>(0);
+  const [costoDomicilio, setCostoDomicilio] = useState<number>(0);
+  const [direccionEnvio, setDireccionEnvio] = useState<string>("");
+  const [telefonoEnvio, setTelefonoEnvio] = useState<string>("");
+
+  const totalCalculado = total + (tipoServicio !== "MESA" ? costoEmpaque : 0) + (tipoServicio === "DOMICILIO" ? costoDomicilio : 0);
+
   // Calcular totales de pagos múltiples
   const totalPagado = pagos.reduce((sum, pago) => sum + pago.monto, 0);
-  const diferencia = total - totalPagado;
+  const diferencia = totalCalculado - totalPagado;
   const pagosValidos = Math.abs(diferencia) < 0.01;
 
   // RESET COMPLETO cuando se abre el diálogo
@@ -109,6 +126,11 @@ export function CheckoutDialog({
       setCambio(0);
       setMostrarCambio(false);
       setDiasCredito("30"); // Resetear días de crédito
+      setTipoServicio("MESA");
+      if (costoEmpaque === 0) setCostoEmpaque(1500);
+      setCostoDomicilio(0);
+      setDireccionEnvio("");
+      setTelefonoEnvio("");
       onMetodoPagoChange("EFECTIVO"); // Resetear también el método de pago
 
       // Cargar cajas registradoras activas
@@ -129,14 +151,14 @@ export function CheckoutDialog({
   useEffect(() => {
     if (!modoMultiple && metodoPagoSeleccionado === "EFECTIVO" && valorRecibido && /^\d+$/.test(valorRecibido)) {
       const recibido = parseInt(valorRecibido, 10);
-      const cambioCalculado = recibido - total;
+      const cambioCalculado = recibido - totalCalculado;
       setCambio(cambioCalculado);
       setMostrarCambio(true);
     } else {
       setMostrarCambio(false);
       setCambio(0);
     }
-  }, [valorRecibido, total, metodoPagoSeleccionado, modoMultiple]);
+  }, [valorRecibido, totalCalculado, metodoPagoSeleccionado, modoMultiple]);
 
   const handleValorRecibidoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Quitar puntos de formato y guardar solo dígitos
@@ -212,13 +234,22 @@ export function CheckoutDialog({
   };
 
   const handleProcesar = () => {
+    const datosEnvio: DatosEnvio = {
+      tipoServicio,
+      costoEmpaque: tipoServicio !== "MESA" ? costoEmpaque : 0,
+      costoDomicilio: tipoServicio === "DOMICILIO" ? costoDomicilio : 0,
+      direccionEnvio,
+      telefonoEnvio,
+    };
+
     if (modoMultiple && onProcesarVentaMultiple) {
-      onProcesarVentaMultiple(pagos, cajaIdSeleccionada || undefined);
+      onProcesarVentaMultiple(pagos, cajaIdSeleccionada || undefined, datosEnvio);
     } else {
       const necesitaReferencia = ["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA", "TARJETA_CREDITO", "TARJETA_DEBITO"].includes(metodoPagoSeleccionado);
       onProcesarVenta(
         necesitaReferencia ? referenciaUnica || undefined : undefined,
-        cajaIdSeleccionada || undefined
+        cajaIdSeleccionada || undefined,
+        datosEnvio
       );
     }
   };
@@ -694,6 +725,105 @@ export function CheckoutDialog({
 
           {/* Columna Derecha */}
           <div className="space-y-4 sm:space-y-5">
+            {/* Tipo de Servicio / Domicilio / Empaque */}
+            <div className="space-y-3 p-3.5 rounded-xl border-2 border-orange-500/30 bg-orange-500/10 dark:bg-orange-950/20">
+              <label className="text-sm font-bold text-orange-900 dark:text-orange-300 flex items-center gap-2">
+                📦 Tipo de Entrega / Servicio
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={tipoServicio === "MESA" ? "default" : "outline"}
+                  onClick={() => {
+                    setTipoServicio("MESA");
+                  }}
+                  className={`h-10 text-xs font-semibold ${tipoServicio === "MESA" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                >
+                  🍽️ Comer aquí
+                </Button>
+                <Button
+                  type="button"
+                  variant={tipoServicio === "LLEVAR" ? "default" : "outline"}
+                  onClick={() => {
+                    setTipoServicio("LLEVAR");
+                    if (costoEmpaque === 0) setCostoEmpaque(1500);
+                  }}
+                  className={`h-10 text-xs font-semibold ${tipoServicio === "LLEVAR" ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-background"}`}
+                >
+                  📦 Para Llevar
+                </Button>
+                <Button
+                  type="button"
+                  variant={tipoServicio === "DOMICILIO" ? "default" : "outline"}
+                  onClick={() => {
+                    setTipoServicio("DOMICILIO");
+                    if (costoEmpaque === 0) setCostoEmpaque(1500);
+                  }}
+                  className={`h-10 text-xs font-semibold ${tipoServicio === "DOMICILIO" ? "bg-sky-600 hover:bg-sky-700 text-white" : "bg-background"}`}
+                >
+                  🛵 Domicilio
+                </Button>
+              </div>
+
+              {tipoServicio !== "MESA" && (
+                <div className="space-y-3 pt-2 border-t border-orange-500/20">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-orange-800 dark:text-orange-300">
+                        🍱 Costo Recipientes / Empaques ($)
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={500}
+                        value={costoEmpaque}
+                        onChange={(e) => setCostoEmpaque(Number(e.target.value || 0))}
+                        className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                      />
+                    </div>
+                    {tipoServicio === "DOMICILIO" && (
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-sky-800 dark:text-sky-300">
+                          🛵 Costo Envío Domicilio ($)
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={500}
+                          value={costoDomicilio}
+                          onChange={(e) => setCostoDomicilio(Number(e.target.value || 0))}
+                          className="h-9 bg-background font-bold text-sky-700 dark:text-sky-400"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {tipoServicio === "DOMICILIO" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold">Dirección de Entrega</label>
+                        <Input
+                          value={direccionEnvio}
+                          onChange={(e) => setDireccionEnvio(e.target.value)}
+                          placeholder="Calle / Carrera #..."
+                          className="h-9 bg-background text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold">Teléfono Contacto</label>
+                        <Input
+                          value={telefonoEnvio}
+                          onChange={(e) => setTelefonoEnvio(e.target.value)}
+                          placeholder="300 000 0000"
+                          className="h-9 bg-background text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Notas */}
             <div className="space-y-3">
               <label className="text-sm font-semibold text-foreground">
@@ -701,7 +831,7 @@ export function CheckoutDialog({
               </label>
               <textarea
                 placeholder="Agregar notas adicionales para la venta..."
-                className="w-full min-h-[120px] sm:min-h-[140px] px-3 py-2 text-sm sm:text-base border-2 border-border rounded-lg resize-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-background"
+                className="w-full min-h-[90px] px-3 py-2 text-sm border-2 border-border rounded-lg resize-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-background"
                 value={notas}
                 onChange={(e) => onNotasChange(e.target.value)}
               />
@@ -715,13 +845,25 @@ export function CheckoutDialog({
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm sm:text-base text-accent-foreground/80">
-                  <span>Artículos ({totalItems}):</span>
+                  <span>Subtotal Artículos ({totalItems}):</span>
                   <span>{formatearMoneda(subtotal)}</span>
                 </div>
+                {tipoServicio !== "MESA" && costoEmpaque > 0 && (
+                  <div className="flex justify-between text-sm font-semibold text-amber-700 dark:text-amber-400">
+                    <span>🍱 Empaque / Recipiente:</span>
+                    <span>+{formatearMoneda(costoEmpaque)}</span>
+                  </div>
+                )}
+                {tipoServicio === "DOMICILIO" && costoDomicilio > 0 && (
+                  <div className="flex justify-between text-sm font-semibold text-sky-700 dark:text-sky-400">
+                    <span>🛵 Envío Domicilio:</span>
+                    <span>+{formatearMoneda(costoDomicilio)}</span>
+                  </div>
+                )}
                 <Separator className="bg-accent/20" />
                 <div className="flex justify-between font-bold text-lg sm:text-xl text-accent-foreground">
                   <span>Total a Pagar:</span>
-                  <span>{formatearMoneda(total)}</span>
+                  <span>{formatearMoneda(totalCalculado)}</span>
                 </div>
               </div>
             </div>

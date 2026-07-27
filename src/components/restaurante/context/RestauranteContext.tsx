@@ -190,16 +190,46 @@ export interface RestauranteContextValue {
     comensales: number;
     clienteId: string;
     notas: string;
+    tipoServicio: string;
+    costoEmpaque: number;
+    costoDomicilio: number;
+    direccionEnvio: string;
+    telefonoEnvio: string;
   };
   setCuentaForm: (
     v:
-      | { nombreCuenta: string; comensales: number; clienteId: string; notas: string }
+      | {
+          nombreCuenta: string;
+          comensales: number;
+          clienteId: string;
+          notas: string;
+          tipoServicio: string;
+          costoEmpaque: number;
+          costoDomicilio: number;
+          direccionEnvio: string;
+          telefonoEnvio: string;
+        }
       | ((prev: {
           nombreCuenta: string;
           comensales: number;
           clienteId: string;
           notas: string;
-        }) => { nombreCuenta: string; comensales: number; clienteId: string; notas: string })
+          tipoServicio: string;
+          costoEmpaque: number;
+          costoDomicilio: number;
+          direccionEnvio: string;
+          telefonoEnvio: string;
+        }) => {
+          nombreCuenta: string;
+          comensales: number;
+          clienteId: string;
+          notas: string;
+          tipoServicio: string;
+          costoEmpaque: number;
+          costoDomicilio: number;
+          direccionEnvio: string;
+          telefonoEnvio: string;
+        })
   ) => void;
   facturaForm: {
     metodoPago: MetodoPagoRestaurante;
@@ -366,6 +396,17 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
 
   // ── Dialogs ──
   const [crearMesaOpen, setCrearMesaOpen] = useState(false);
+
+  useEffect(() => {
+    if (crearMesaOpen) {
+      const proximoNumero = mesas.length + 1;
+      setNuevaMesa({
+        nombre: `${proximoNumero}`,
+        capacidad: 4,
+        ubicacion: "Sala Principal",
+      });
+    }
+  }, [crearMesaOpen, mesas.length]);
   const [editarMesaOpen, setEditarMesaOpen] = useState(false);
   const [productoOpen, setProductoOpen] = useState(false);
   const [itemOpen, setItemOpen] = useState(false);
@@ -397,6 +438,11 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     comensales: 1,
     clienteId: "sin-cliente",
     notas: "",
+    tipoServicio: "MESA",
+    costoEmpaque: 0,
+    costoDomicilio: 0,
+    direccionEnvio: "",
+    telefonoEnvio: "",
   });
   const [facturaForm, setFacturaForm] = useState({
     metodoPago: "EFECTIVO" as MetodoPagoRestaurante,
@@ -569,6 +615,11 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
         comensales: 1,
         clienteId: "sin-cliente",
         notas: "",
+        tipoServicio: "MESA",
+        costoEmpaque: 0,
+        costoDomicilio: 0,
+        direccionEnvio: "",
+        telefonoEnvio: "",
       });
       setFacturaForm((prev) => ({ ...prev, clienteId: "sin-cliente", notas: "" }));
       setMesasParaUnir([]);
@@ -582,6 +633,11 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
       comensales: pedidoActivo.comensales,
       clienteId: pedidoActivo.cliente?.id || "sin-cliente",
       notas: pedidoActivo.notas || "",
+      tipoServicio: pedidoActivo.tipoServicio || "MESA",
+      costoEmpaque: pedidoActivo.costoEmpaque || 0,
+      costoDomicilio: pedidoActivo.costoDomicilio || 0,
+      direccionEnvio: pedidoActivo.direccionEnvio || "",
+      telefonoEnvio: pedidoActivo.telefonoEnvio || "",
     });
     setFacturaForm((prev) => ({
       ...prev,
@@ -714,6 +770,11 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
         comensales: cuentaForm.comensales,
         clienteId: cuentaForm.clienteId === "sin-cliente" ? undefined : cuentaForm.clienteId,
         notas: cuentaForm.notas,
+        tipoServicio: cuentaForm.tipoServicio,
+        costoEmpaque: cuentaForm.costoEmpaque,
+        costoDomicilio: cuentaForm.costoDomicilio,
+        direccionEnvio: cuentaForm.direccionEnvio,
+        telefonoEnvio: cuentaForm.telefonoEnvio,
       });
       await recargarOperativo(mesaSeleccionada?.id);
       toast({ title: "Cuenta actualizada", description: "Los datos de la mesa quedaron guardados" });
@@ -776,6 +837,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
         description: `${selectedProduct.nombre} quedó cargado en ${mesaSeleccionada.nombre}`,
       });
     } catch (error) {
+      await recargarOperativo(mesaSeleccionada.id);
       toast({
         title: "No se pudo agregar el producto",
         description: error instanceof Error ? error.message : "Intenta nuevamente",

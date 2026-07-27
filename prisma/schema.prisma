@@ -498,6 +498,11 @@ model PedidoRestaurante {
   subtotal         Decimal                  @default(0.00) @db.Decimal(10, 2)
   impuesto         Decimal                  @default(0.00) @db.Decimal(10, 2)
   total            Decimal                  @default(0.00) @db.Decimal(10, 2)
+  tipoServicio     String                   @default("MESA")
+  costoEmpaque     Decimal                  @default(0.00) @db.Decimal(10, 2)
+  costoDomicilio   Decimal                  @default(0.00) @db.Decimal(10, 2)
+  direccionEnvio   String?                  @db.Text
+  telefonoEnvio    String?
   fechaFacturacion DateTime?
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
@@ -602,6 +607,8 @@ model producto {
   requiereBalanza       Boolean                     @default(false)
   pesoAproximado        Decimal?                    @db.Decimal(10, 3)
   activo                Boolean                     @default(true)
+  requiereEmpaque       Boolean                     @default(true)
+  precioEmpaque         Decimal?                    @db.Decimal(10, 2)
   empresaId             String
   categoriaId           String?
   proveedorId           String?
@@ -877,6 +884,11 @@ model venta {
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   impuesto            Decimal                  @default(0.00) @db.Decimal(10, 2)
+  tipoServicio        String?                  @default("MESA")
+  costoEmpaque        Decimal                  @default(0.00) @db.Decimal(10, 2)
+  costoDomicilio      Decimal                  @default(0.00) @db.Decimal(10, 2)
+  direccionEnvio      String?                  @db.Text
+  telefonoEnvio       String?
   diasCredito         Int?
   esVentaFiada        Boolean                  @default(false)
   estadoPago          venta_estadoPago         @default(PENDIENTE)
