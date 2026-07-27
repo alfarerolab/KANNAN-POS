@@ -535,32 +535,45 @@ function PanelPedido() {
                   </div>
                 ) : (
                   pedidoActivo.items.map((item) => (
-                    <div key={item.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-border bg-background p-3 pl-4 transition-all hover:border-orange-500/30">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-bold text-foreground text-base leading-none">{item.cantidad}×</span>
-                          <p className="font-semibold text-foreground leading-none">{item.nombreProducto}</p>
-                          <Badge className={`text-[9px] px-1.5 py-0 uppercase tracking-wider ${getEstadoPreparacionTone(item.estadoPreparacion)}`}>
-                            {getEstadoPreparacionLabel(item.estadoPreparacion)}
-                          </Badge>
+                    <div key={item.id} className="group rounded-2xl border border-border bg-card p-3.5 space-y-2.5 transition-all hover:border-orange-500/40 hover:shadow-sm">
+                      {/* Entezado: Cantidad, Nombre y Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="font-black text-foreground text-sm bg-muted px-2 py-0.5 rounded-lg shrink-0">
+                            {item.cantidad}×
+                          </span>
+                          <p className="font-bold text-foreground text-sm leading-snug break-words">
+                            {item.nombreProducto}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
-                          <span className="bg-muted px-2 py-0.5 rounded-md font-medium">{formatCurrency(item.precioUnitario)}</span>
-                          {item.notas && <span className="text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-md truncate max-w-[150px]">📝 {item.notas}</span>}
-                        </div>
+                        <Badge className={`shrink-0 text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider ${getEstadoPreparacionTone(item.estadoPreparacion)}`}>
+                          {getEstadoPreparacionLabel(item.estadoPreparacion)}
+                        </Badge>
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-auto w-full border-t sm:border-0 border-border pt-3 sm:pt-0 mt-2 sm:mt-0">
-                        <p className="font-black text-lg text-foreground w-24 text-right tabular-nums">{formatCurrency(item.subtotal)}</p>
-                        <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad - 1)}>
-                            <Minus className="h-4 w-4" />
+                      {/* Notas opcionales */}
+                      {item.notas && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium bg-amber-500/10 p-1.5 rounded-lg">
+                          📝 {item.notas}
+                        </p>
+                      )}
+
+                      {/* Pie: Subtotal y Botones de Acción */}
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Subtotal</span>
+                          <span className="font-black text-base text-foreground tabular-nums">{formatCurrency(item.subtotal)}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1 bg-muted/60 rounded-xl p-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad - 1)}>
+                            <Minus className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-orange-600 hover:text-orange-700" onClick={() => abrirEditorItem(item)}>
-                            <Pencil className="h-4 w-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-orange-600 hover:text-orange-700" onClick={() => abrirEditorItem(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad + 1)}>
-                            <Plus className="h-4 w-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad + 1)}>
+                            <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
