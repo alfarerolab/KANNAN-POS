@@ -100,6 +100,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const mesaExistente = await db.mesaRestaurante.findFirst({
+      where: {
+        empresaId: token.empresaId as string,
+        nombre: nombre,
+      },
+    });
+
+    if (mesaExistente) {
+      return NextResponse.json(
+        { error: `Ya existe una mesa con el nombre "${nombre}". Por favor elige otro número o nombre (ej: 4, 5 o Barra).` },
+        { status: 400 }
+      );
+    }
+
     const mesa = await db.mesaRestaurante.create({
       data: {
         nombre,

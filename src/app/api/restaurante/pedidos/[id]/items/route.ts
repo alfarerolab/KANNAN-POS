@@ -130,13 +130,12 @@ export async function POST(req: NextRequest, context: ContextoRuta) {
 
     if (producto.esCombo && producto.componentes) {
       stockDisponible = calcularStockCombo(producto.componentes);
-    }
-
-    if (stockDisponible < cantidad) {
-      return NextResponse.json(
-        { error: `${producto.nombre} no tiene stock suficiente para agregar ${cantidad} unidad(es)` },
-        { status: 400 }
-      );
+      if (stockDisponible < cantidad) {
+        return NextResponse.json(
+          { error: `El combo ${producto.nombre} no tiene componentes suficientes para ${cantidad} unidad(es)` },
+          { status: 400 }
+        );
+      }
     }
 
     const pedidoActualizado = await db.$transaction(async (tx: import("@prisma/client").Prisma.TransactionClient) => {

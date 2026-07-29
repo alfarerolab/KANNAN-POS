@@ -247,6 +247,7 @@ export function ProductGrid({
                     const isSelected = categoriaSeleccionada === categoria.id;
                     const solidColor = getCategoriaColor(categoria, isSelected);
                     const icon = getCategoriaIcon(categoria);
+                    const count = categoria._count?.productos ?? productos.filter((p: any) => p.categoriaId === categoria.id || p.categoria?.id === categoria.id).length;
 
                     return (
                       <Button
@@ -264,7 +265,7 @@ export function ProductGrid({
                               {categoria.nombre}
                             </div>
                             <div className="text-xs opacity-80">
-                              {categoria._count?.productos || 0}
+                              {count}
                             </div>
                           </div>
                         </div>

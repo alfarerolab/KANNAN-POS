@@ -220,7 +220,14 @@ export function useSaleProcessing({
     pagosMultiples?: PagoDetalle[],
     consumosInternos?: Record<string, { productoId: string; cantidad: number }[]>,
     comandaId?: string,
-    cajaId?: string
+    cajaId?: string,
+    datosEnvio?: {
+      tipoServicio?: string;
+      costoEmpaque?: number;
+      costoDomicilio?: number;
+      direccionEnvio?: string;
+      telefonoEnvio?: string;
+    }
   ) => {
     if (items.length === 0) {
       toast({
@@ -269,6 +276,8 @@ export function useSaleProcessing({
         return null;
       }
 
+      const totalFinal = total + (datosEnvio?.costoEmpaque || 0) + (datosEnvio?.costoDomicilio || 0);
+
       // Preparar datos de venta
       let datosVenta: any = {
         items: itemsCarrito,
@@ -277,12 +286,17 @@ export function useSaleProcessing({
         subtotal,
         impuesto: 0,
         descuento: 0,
-        total,
+        total: totalFinal,
         empresaId: empresaId,
         tipoNegocio: configuracion?.tipoNegocio,
         comandaId: comandaId, // Added comandaId
         consumosInternos: consumosInternos, // NUEVO: pasar consumos al backend
         cajaId: cajaId || undefined,
+        tipoServicio: datosEnvio?.tipoServicio || "MESA",
+        costoEmpaque: datosEnvio?.costoEmpaque || 0,
+        costoDomicilio: datosEnvio?.costoDomicilio || 0,
+        direccionEnvio: datosEnvio?.direccionEnvio || undefined,
+        telefonoEnvio: datosEnvio?.telefonoEnvio || undefined,
       };
 
       // Si es pago múltiple, agregar los pagos

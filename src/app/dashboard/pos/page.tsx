@@ -707,16 +707,13 @@ function PuntoDeVenta() {
     );
   }
 
-
-
-  // FUNCIÓN PARA PROCESAR VENTA CON PAGO ÚNICO
-  const handleProcesarVenta = async (referencia?: string, cajaId?: string) => {
-    setPagosRealizados([]); // Limpiar pagos múltiples
-
+  // FUNCIÓN PRINCIPAL PARA PROCESAR VENTA (PAGO ÚNICO)
+  const handleProcesarVenta = async (referencia?: string, cajaId?: string, datosEnvio?: any) => {
     // Si hay referencia (transferencia / tarjeta), la empaquetamos como un pago único
     // con referencia para que quede guardada en la venta
+    const totalConEmpaque = total + (datosEnvio?.costoEmpaque || 0) + (datosEnvio?.costoDomicilio || 0);
     const pagosConReferencia = referencia
-      ? [{ id: crypto.randomUUID(), metodoPago: metodoPagoSeleccionado, monto: total, referencia }]
+      ? [{ id: crypto.randomUUID(), metodoPago: metodoPagoSeleccionado, monto: totalConEmpaque, referencia }]
       : undefined;
 
     const resultado = await procesarVenta(
@@ -727,7 +724,8 @@ function PuntoDeVenta() {
       pagosConReferencia, // undefined cuando no hay referencia (comportamiento original)
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
       comandaActivaId,
-      cajaId // Caja registradora seleccionada
+      cajaId, // Caja registradora seleccionada
+      datosEnvio
     );
 
     if (resultado) {
@@ -739,14 +737,15 @@ function PuntoDeVenta() {
 
       toast({
         title: "Venta procesada exitosamente",
-        description: `Total: ${formatearMoneda(total)}${resultado.citasActualizadas > 0 ? ` - ${resultado.citasActualizadas} cita(s) completada(s)` : ''}`
+        description: `Total: ${formatearMoneda(resultado.venta?.total ?? totalConEmpaque)}${resultado.citasActualizadas > 0 ? ` - ${resultado.citasActualizadas} cita(s) completada(s)` : ''}`
       });
     }
   };
 
   // FUNCIÓN PARA PROCESAR VENTA CON PAGOS MÚLTIPLES
-  const handleProcesarVentaMultiple = async (pagos: PagoDetalle[], cajaId?: string) => {
+  const handleProcesarVentaMultiple = async (pagos: PagoDetalle[], cajaId?: string, datosEnvio?: any) => {
     setPagosRealizados(pagos); // Guardar pagos
+    const totalConEmpaque = total + (datosEnvio?.costoEmpaque || 0) + (datosEnvio?.costoDomicilio || 0);
 
     const resultado = await procesarVenta(
       clienteSeleccionado,
@@ -756,7 +755,8 @@ function PuntoDeVenta() {
       pagos, // Pasar los pagos múltiples
       Object.keys(consumosInternosPorItem).length > 0 ? consumosInternosPorItem : undefined,
       comandaActivaId,
-      cajaId // Caja registradora seleccionada
+      cajaId, // Caja registradora seleccionada
+      datosEnvio
     );
 
     if (resultado) {
@@ -768,7 +768,7 @@ function PuntoDeVenta() {
 
       toast({
         title: "Venta procesada exitosamente",
-        description: `Total: ${formatearMoneda(total)} - Pago Mixto${resultado.citasActualizadas > 0 ? ` - ${resultado.citasActualizadas} cita(s) completada(s)` : ''}`
+        description: `Total: ${formatearMoneda(resultado.venta?.total ?? totalConEmpaque)} - Pago Mixto${resultado.citasActualizadas > 0 ? ` - ${resultado.citasActualizadas} cita(s) completada(s)` : ''}`
       });
     }
   };

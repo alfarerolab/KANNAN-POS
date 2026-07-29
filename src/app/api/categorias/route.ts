@@ -41,9 +41,14 @@ export async function GET(request: NextRequest) {
       where: whereClause,
     });
 
-    // Obtener categorías con paginación
+    // Obtener categorías con paginación y conteo de productos
     const categorias = await db.categoria.findMany({
       where: whereClause,
+      include: {
+        _count: {
+          select: { productos: { where: { activo: true } } }
+        }
+      },
       orderBy: {
         nombre: "asc",
       },

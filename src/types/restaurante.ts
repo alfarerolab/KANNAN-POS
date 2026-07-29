@@ -52,6 +52,11 @@ export interface RestaurantePedido {
   subtotal: number;
   impuesto: number;
   total: number;
+  tipoServicio?: string | null;
+  costoEmpaque?: number | null;
+  costoDomicilio?: number | null;
+  direccionEnvio?: string | null;
+  telefonoEnvio?: string | null;
   ventaId?: string | null;
   fechaFacturacion?: string | null;
   createdAt: string;
@@ -95,6 +100,11 @@ export interface RestaurantePedidoPayload {
   nombreCuenta?: string;
   notas?: string;
   comensales?: number;
+  tipoServicio?: string;
+  costoEmpaque?: number;
+  costoDomicilio?: number;
+  direccionEnvio?: string;
+  telefonoEnvio?: string;
 }
 
 export interface RestauranteAddItemPayload {

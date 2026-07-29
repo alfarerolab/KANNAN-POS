@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
           id: true,
           nombre: true,
           descripcion: true,
-          // _count: { select: { productos: true } }, // Removido para mejorar el rendimiento (causaba demoras)
+          _count: { select: { productos: { where: { activo: true } } } },
         },
       });
     }

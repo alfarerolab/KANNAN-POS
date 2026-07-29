@@ -248,8 +248,7 @@ function MapaMesasAgrupado() {
 // ─── Resumen Flotante Superior ────────────────────────────────────────────────
 
 function ResumenFlotante() {
-  const { mesas, recargarOperativo, recargandoVista } = useRestaurante();
-
+  const { mesas, recargarOperativo, recargandoVista, setCrearMesaOpen } = useRestaurante();
   const activas = mesas.filter(m => m.activa);
   const libres = activas.filter(m => m.estado === "LIBRE").length;
   const ocupadas = activas.filter(m => m.estado === "OCUPADA").length;
@@ -285,10 +284,19 @@ function ResumenFlotante() {
           )}
         </div>
       </div>
-      <Button variant="outline" size="sm" onClick={() => recargarOperativo()} disabled={recargandoVista} className="h-9 rounded-xl border-border bg-card">
-        {recargandoVista ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-        Actualizar
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={() => setCrearMesaOpen(true)}
+          className="h-9 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-md gap-1.5"
+        >
+          <Plus className="h-4 w-4" />
+          Nueva Mesa
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => recargarOperativo()} disabled={recargandoVista} className="h-9 rounded-xl border-border bg-card">
+          {recargandoVista ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          Actualizar
+        </Button>
+      </div>
     </div>
   );
 }
@@ -417,6 +425,89 @@ function PanelPedido() {
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Tipo de servicio</Label>
+              <Select
+                value={cuentaForm.tipoServicio}
+                onValueChange={(val) => {
+                  const nuevoCostoEmpaque = val !== "MESA" && cuentaForm.costoEmpaque === 0 ? 1500 : (val === "MESA" ? 0 : cuentaForm.costoEmpaque);
+                  setCuentaForm((prev) => ({
+                    ...prev,
+                    tipoServicio: val,
+                    costoEmpaque: nuevoCostoEmpaque,
+                  }));
+                }}
+                disabled={!pedidoActivo}
+              >
+                <SelectTrigger className="h-10 bg-muted/50 font-medium">
+                  <SelectValue placeholder="Comer en Mesa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MESA">🍽️ Comer en Mesa</SelectItem>
+                  <SelectItem value="LLEVAR">📦 Para Llevar</SelectItem>
+                  <SelectItem value="DOMICILIO">🛵 Domicilio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {cuentaForm.tipoServicio !== "MESA" && (
+              <div className="space-y-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                    🍱 Costo Recipiente / Empaque ($)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={cuentaForm.costoEmpaque}
+                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoEmpaque: Number(e.target.value || 0) }))}
+                    disabled={!pedidoActivo}
+                    className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                  />
+                </div>
+
+                {cuentaForm.tipoServicio === "DOMICILIO" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                        🛵 Costo Envío / Domicilio ($)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={500}
+                        value={cuentaForm.costoDomicilio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoDomicilio: Number(e.target.value || 0) }))}
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Dirección de Entrega</Label>
+                      <Input
+                        value={cuentaForm.direccionEnvio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, direccionEnvio: e.target.value }))}
+                        placeholder="Calle / Carrera #..."
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Teléfono Contacto</Label>
+                      <Input
+                        value={cuentaForm.telefonoEnvio}
+                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, telefonoEnvio: e.target.value }))}
+                        placeholder="300 000 0000"
+                        disabled={!pedidoActivo}
+                        className="h-9 bg-background text-xs"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Notas generales</Label>
               <Textarea value={cuentaForm.notas} onChange={(e) => setCuentaForm((prev) => ({ ...prev, notas: e.target.value }))} disabled={!pedidoActivo} className="resize-none bg-muted/50" rows={2} />
             </div>
@@ -450,32 +541,45 @@ function PanelPedido() {
                   </div>
                 ) : (
                   pedidoActivo.items.map((item) => (
-                    <div key={item.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-border bg-background p-3 pl-4 transition-all hover:border-orange-500/30">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-bold text-foreground text-base leading-none">{item.cantidad}×</span>
-                          <p className="font-semibold text-foreground leading-none">{item.nombreProducto}</p>
-                          <Badge className={`text-[9px] px-1.5 py-0 uppercase tracking-wider ${getEstadoPreparacionTone(item.estadoPreparacion)}`}>
-                            {getEstadoPreparacionLabel(item.estadoPreparacion)}
-                          </Badge>
+                    <div key={item.id} className="group rounded-2xl border border-border bg-card p-3.5 space-y-2.5 transition-all hover:border-orange-500/40 hover:shadow-sm">
+                      {/* Entezado: Cantidad, Nombre y Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="font-black text-foreground text-sm bg-muted px-2 py-0.5 rounded-lg shrink-0">
+                            {item.cantidad}×
+                          </span>
+                          <p className="font-bold text-foreground text-sm leading-snug break-words">
+                            {item.nombreProducto}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
-                          <span className="bg-muted px-2 py-0.5 rounded-md font-medium">{formatCurrency(item.precioUnitario)}</span>
-                          {item.notas && <span className="text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-md truncate max-w-[150px]">📝 {item.notas}</span>}
-                        </div>
+                        <Badge className={`shrink-0 text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider ${getEstadoPreparacionTone(item.estadoPreparacion)}`}>
+                          {getEstadoPreparacionLabel(item.estadoPreparacion)}
+                        </Badge>
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-auto w-full border-t sm:border-0 border-border pt-3 sm:pt-0 mt-2 sm:mt-0">
-                        <p className="font-black text-lg text-foreground w-24 text-right tabular-nums">{formatCurrency(item.subtotal)}</p>
-                        <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad - 1)}>
-                            <Minus className="h-4 w-4" />
+                      {/* Notas opcionales */}
+                      {item.notas && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium bg-amber-500/10 p-1.5 rounded-lg">
+                          📝 {item.notas}
+                        </p>
+                      )}
+
+                      {/* Pie: Subtotal y Botones de Acción */}
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Subtotal</span>
+                          <span className="font-black text-base text-foreground tabular-nums">{formatCurrency(item.subtotal)}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1 bg-muted/60 rounded-xl p-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad - 1)}>
+                            <Minus className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-orange-600 hover:text-orange-700" onClick={() => abrirEditorItem(item)}>
-                            <Pencil className="h-4 w-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-orange-600 hover:text-orange-700" onClick={() => abrirEditorItem(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad + 1)}>
-                            <Plus className="h-4 w-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-background shadow-sm text-muted-foreground hover:text-foreground" disabled={actualizandoItem} onClick={() => ajustarCantidadRapida(item, item.cantidad + 1)}>
+                            <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -487,9 +591,21 @@ function PanelPedido() {
               {/* Totales fijos abajo */}
               <div className="bg-foreground text-background p-5">
                 <div className="flex justify-between items-center text-sm opacity-70 mb-1">
-                  <span>Subtotal</span>
+                  <span>Subtotal Platos</span>
                   <span className="tabular-nums">{formatCurrency(pedidoActivo.subtotal)}</span>
                 </div>
+                {Boolean(pedidoActivo.costoEmpaque) && (
+                  <div className="flex justify-between items-center text-sm opacity-90 text-amber-300 mb-1">
+                    <span>🍱 Empaque / Recipiente</span>
+                    <span className="tabular-nums font-bold">+{formatCurrency(pedidoActivo.costoEmpaque || 0)}</span>
+                  </div>
+                )}
+                {Boolean(pedidoActivo.costoDomicilio) && (
+                  <div className="flex justify-between items-center text-sm opacity-90 text-sky-300 mb-1">
+                    <span>🛵 Envío Domicilio</span>
+                    <span className="tabular-nums font-bold">+{formatCurrency(pedidoActivo.costoDomicilio || 0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-sm opacity-70 mb-3 border-b border-background/20 pb-3">
                   <span>Impuestos</span>
                   <span className="tabular-nums">{formatCurrency(pedidoActivo.impuesto)}</span>
@@ -606,7 +722,9 @@ interface NotifItem {
 import { ShoppingCart, User, Monitor, Mic } from "lucide-react";
 
 export function MeseroView() {
-  const { mesas, mesaSeleccionada } = useRestaurante();
+  const { mesas, mesaSeleccionada, setCrearMesaOpen } = useRestaurante();
+  const prevItemStatusRef = useRef<Record<string, string>>({});
+  const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
   const [activeTab, setActiveTab] = useState("mesas");
   const [agregarModalOpen, setAgregarModalOpen] = useState(false);
 
@@ -762,18 +880,23 @@ export function MeseroView() {
         </div>
       )}
 
-      {/* ── DESKTOP: layout de flujo único (xl+) ─────────────────────────────── */}
-      <div className="hidden xl:flex xl:flex-col gap-6 w-full max-w-full">
-        {/* Panel superior: mapa de mesas */}
-        <Card className="overflow-visible border-border bg-card/50 shadow-none border-none">
-          <CardHeader className="border-b border-border bg-card p-4 rounded-t-2xl shadow-sm">
-            <CardTitle className="flex items-center justify-between text-lg font-bold">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-indigo-500" />
-                Mesas activas
-              </div>
-              <div className="text-sm font-normal text-muted-foreground uppercase tracking-widest">{mesas.length} MESAS</div>
+      {/* ── DESKTOP: layout lado a lado (xl+) ─────────────────────────────── */}
+      <div className="hidden xl:grid gap-6 xl:grid-cols-[400px_1fr] 2xl:grid-cols-[480px_1fr]">
+        {/* Panel izquierdo: mapa de mesas agrupado por zona */}
+        <Card className="overflow-hidden border-border bg-card/50 shadow-sm self-start sticky top-[100px] max-h-[calc(100vh-120px)] flex flex-col">
+          <CardHeader className="border-b border-border bg-card p-5 shrink-0 flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-xl font-bold">
+              <Armchair className="h-6 w-6 text-orange-500" />
+              Zonas y Mesas
             </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => setCrearMesaOpen(true)}
+              className="h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold gap-1 rounded-xl shadow-sm px-3"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              + Mesa
+            </Button>
           </CardHeader>
           <CardContent className="p-4 bg-background border border-t-0 rounded-b-2xl shadow-sm">
             <MapaMesasAgrupado />
