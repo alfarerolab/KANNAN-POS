@@ -68,6 +68,7 @@ const METODOS_PAGO = [
   { value: "TRANSFERENCIA", label: "Transferencia Bancaria", icon: "🏦" },
   { value: "NEQUI", label: "Transferencia (Nequi)", icon: "📱" },
   { value: "DAVIPLATA", label: "Transferencia (Daviplata)", icon: "📱" },
+  { value: "BANCOLOMBIA", label: "Transferencia (Bancolombia)", icon: "🏦" },
   { value: "FIADO", label: "Fiado", icon: "📝" },
   { value: "MIXTO", label: "Pago Mixto", icon: "💳" },
   { value: "OTRO", label: "Otro", icon: "💰" },
@@ -110,7 +111,7 @@ export function DialogoEditarVenta({
     if (venta) {
       setMetodoPago(venta.metodoPago);
       setNotas(venta.notas || "");
-      
+
       const iniciales: { [itemId: string]: string } = {};
       venta.items.forEach((item) => {
         iniciales[item.id] = item.empleado?.id || "ninguno";

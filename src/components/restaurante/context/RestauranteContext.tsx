@@ -83,12 +83,12 @@ export const ESTADOS_MESA_OPCIONES: Array<{
   value: EstadoMesaRestaurante;
   label: string;
 }> = [
-  { value: "LIBRE", label: "Libre" },
-  { value: "RESERVADA", label: "Reservada" },
-  { value: "LIMPIEZA", label: "Limpieza" },
-  { value: "OCUPADA", label: "Ocupada" },
-  { value: "INACTIVA", label: "Inactiva" },
-];
+    { value: "LIBRE", label: "Libre" },
+    { value: "RESERVADA", label: "Reservada" },
+    { value: "LIMPIEZA", label: "Limpieza" },
+    { value: "OCUPADA", label: "Ocupada" },
+    { value: "INACTIVA", label: "Inactiva" },
+  ];
 
 export type RolVista = "mesero" | "cocina" | "caja";
 export type ModoModulo = "restaurante" | "bar";
@@ -195,35 +195,37 @@ export interface RestauranteContextValue {
     v:
       | { nombreCuenta: string; comensales: number; clienteId: string; notas: string }
       | ((prev: {
-          nombreCuenta: string;
-          comensales: number;
-          clienteId: string;
-          notas: string;
-        }) => { nombreCuenta: string; comensales: number; clienteId: string; notas: string })
+        nombreCuenta: string;
+        comensales: number;
+        clienteId: string;
+        notas: string;
+      }) => { nombreCuenta: string; comensales: number; clienteId: string; notas: string })
   ) => void;
   facturaForm: {
     metodoPago: MetodoPagoRestaurante;
     clienteId: string;
     notas: string;
+    propina: number; // 0 = sin propina, 10 = 10%
   };
   setFacturaForm: (
     v:
-      | { metodoPago: MetodoPagoRestaurante; clienteId: string; notas: string }
-      | ((prev: { metodoPago: MetodoPagoRestaurante; clienteId: string; notas: string }) => {
-          metodoPago: MetodoPagoRestaurante;
-          clienteId: string;
-          notas: string;
-        })
+      | { metodoPago: MetodoPagoRestaurante; clienteId: string; notas: string; propina: number }
+      | ((prev: { metodoPago: MetodoPagoRestaurante; clienteId: string; notas: string; propina: number }) => {
+        metodoPago: MetodoPagoRestaurante;
+        clienteId: string;
+        notas: string;
+        propina: number;
+      })
   ) => void;
   productoForm: { cantidad: number; notas: string; estacion: EstacionPreparacionRestaurante };
   setProductoForm: (
     v:
       | { cantidad: number; notas: string; estacion: EstacionPreparacionRestaurante }
       | ((prev: {
-          cantidad: number;
-          notas: string;
-          estacion: EstacionPreparacionRestaurante;
-        }) => { cantidad: number; notas: string; estacion: EstacionPreparacionRestaurante })
+        cantidad: number;
+        notas: string;
+        estacion: EstacionPreparacionRestaurante;
+      }) => { cantidad: number; notas: string; estacion: EstacionPreparacionRestaurante })
   ) => void;
   itemForm: {
     cantidad: number;
@@ -234,22 +236,22 @@ export interface RestauranteContextValue {
   setItemForm: (
     v:
       | {
-          cantidad: number;
-          notas: string;
-          estacion: EstacionPreparacionRestaurante;
-          estadoPreparacion: EstadoPreparacionRestaurante;
-        }
+        cantidad: number;
+        notas: string;
+        estacion: EstacionPreparacionRestaurante;
+        estadoPreparacion: EstadoPreparacionRestaurante;
+      }
       | ((prev: {
-          cantidad: number;
-          notas: string;
-          estacion: EstacionPreparacionRestaurante;
-          estadoPreparacion: EstadoPreparacionRestaurante;
-        }) => {
-          cantidad: number;
-          notas: string;
-          estacion: EstacionPreparacionRestaurante;
-          estadoPreparacion: EstadoPreparacionRestaurante;
-        })
+        cantidad: number;
+        notas: string;
+        estacion: EstacionPreparacionRestaurante;
+        estadoPreparacion: EstadoPreparacionRestaurante;
+      }) => {
+        cantidad: number;
+        notas: string;
+        estacion: EstacionPreparacionRestaurante;
+        estadoPreparacion: EstadoPreparacionRestaurante;
+      })
   ) => void;
   mesasParaUnir: string[];
   setMesasParaUnir: (v: string[] | ((prev: string[]) => string[])) => void;
@@ -402,6 +404,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     metodoPago: "EFECTIVO" as MetodoPagoRestaurante,
     clienteId: "sin-cliente",
     notas: "",
+    propina: 0, // porcentaje de propina opcional (0 o 10)
   });
   const [productoForm, setProductoForm] = useState<{
     cantidad: number;
@@ -587,6 +590,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
       ...prev,
       clienteId: pedidoActivo.cliente?.id || "sin-cliente",
       notas: pedidoActivo.notas || "",
+      propina: 0, // reset propina al cambiar de mesa
     }));
     setDivisionPersonas(Math.max(2, pedidoActivo.comensales));
     setDivisionItems(
@@ -633,8 +637,8 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     // Polling global para mantener todas las vistas (Mesero, Caja, etc) sincronizadas.
     const intervalId = setInterval(() => {
       recargarOperativo(selectedMesaId);
-    }, 10_000); // 10 segundos para mayor reactividad
-    
+    }, 120_000); // 2 minutos para reducir carga de red
+
     return () => clearInterval(intervalId);
   }, [selectedMesaId, recargarOperativo]);
 
@@ -756,6 +760,10 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     }
     try {
       setAgregandoProducto(true);
+
+      // ─── Optimistic update: cerrar modal inmediatamente ───────────────────
+      setProductoOpen(false);
+
       const pedido =
         mesaSeleccionada.pedidoAbierto ||
         (await restauranteApi.abrirPedido({
@@ -763,19 +771,70 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
           nombreCuenta: mesaSeleccionada.nombre,
           comensales: 1,
         }));
+
+      // Actualizar local optimistamente antes de esperar el refresh
+      const precioUnit = selectedProduct.precio ?? 0;
+      const subtotalItem = precioUnit * productoForm.cantidad;
+      setMesas((prev) =>
+        prev.map((m) => {
+          if (m.id !== mesaSeleccionada.id) return m;
+          const pedidoLocal = m.pedidoAbierto || {
+            ...pedido,
+            items: [],
+            total: 0,
+            subtotal: 0,
+            impuesto: 0,
+            comensales: 1,
+          };
+          const itemOptimista = {
+            id: `optimistic-${Date.now()}`,
+            pedidoId: pedidoLocal.id,
+            productoId: selectedProduct.id,
+            nombreProducto: selectedProduct.nombre,
+            cantidad: productoForm.cantidad,
+            precioUnitario: precioUnit,
+            subtotal: subtotalItem,
+            notas: productoForm.notas || null,
+            estacion: productoForm.estacion,
+            esCortesia: false,
+            estadoPreparacion: "PENDIENTE" as const,
+            fechaListo: null,
+            fechaEntrega: null,
+            createdAt: new Date().toISOString(),
+          };
+          const itemsActualizados = [...pedidoLocal.items, itemOptimista];
+          const nuevoTotal = itemsActualizados.reduce((s, i) => s + i.subtotal, 0);
+          return {
+            ...m,
+            estado: "OCUPADA" as const,
+            pedidoAbierto: {
+              ...pedidoLocal,
+              items: itemsActualizados,
+              total: nuevoTotal,
+              subtotal: nuevoTotal,
+            },
+          };
+        })
+      );
+
+      // API call real
       await restauranteApi.agregarItem(pedido.id, {
         productoId: selectedProduct.id,
         cantidad: productoForm.cantidad,
         notas: productoForm.notas || undefined,
         estacion: productoForm.estacion,
       });
-      setProductoOpen(false);
-      await recargarOperativo(mesaSeleccionada.id);
+
+      // Refresh en background (no bloqueante para el usuario)
+      recargarOperativo(mesaSeleccionada.id);
+
       toast({
         title: "Consumo agregado",
         description: `${selectedProduct.nombre} quedó cargado en ${mesaSeleccionada.nombre}`,
       });
     } catch (error) {
+      // Revertir optimistic update en caso de error
+      recargarOperativo(mesaSeleccionada.id);
       toast({
         title: "No se pudo agregar el producto",
         description: error instanceof Error ? error.message : "Intenta nuevamente",
@@ -789,8 +848,38 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
   const ajustarCantidadRapida = useCallback(
     async (item: RestaurantePedidoItem, cantidad: number) => {
       if (!pedidoActivo) return;
+
+      // Actualización Optimista
+      setMesas(prevMesas =>
+        prevMesas.map(m => {
+          if (!mesaSeleccionada || m.id !== mesaSeleccionada.id) return m;
+
+          let itemsActualizados = [...(m.pedidoAbierto?.items || [])];
+          if (cantidad <= 0) {
+            itemsActualizados = itemsActualizados.filter(i => i.id !== item.id);
+          } else {
+            itemsActualizados = itemsActualizados.map(i => {
+              if (i.id === item.id) {
+                return { ...i, cantidad, subtotal: cantidad * i.precioUnitario };
+              }
+              return i;
+            });
+          }
+          const nuevoTotal = itemsActualizados.reduce((s, i) => s + i.subtotal, 0);
+
+          return {
+            ...m,
+            pedidoAbierto: m.pedidoAbierto ? {
+              ...m.pedidoAbierto,
+              items: itemsActualizados,
+              total: nuevoTotal,
+              subtotal: nuevoTotal
+            } : null
+          };
+        })
+      );
+
       try {
-        setActualizandoItem(true);
         if (cantidad <= 0) {
           await restauranteApi.eliminarItem(pedidoActivo.id, item.id);
         } else {
@@ -799,15 +888,16 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
             notas: item.notas || undefined,
           });
         }
-        await recargarOperativo(mesaSeleccionada?.id);
+        // Refrescar de fondo
+        recargarOperativo(mesaSeleccionada?.id);
       } catch (error) {
+        // Revertir en caso de fallar
+        recargarOperativo(mesaSeleccionada?.id);
         toast({
-          title: "No se pudo ajustar el item",
-          description: error instanceof Error ? error.message : "Intenta nuevamente",
+          title: "Error al actualizar",
+          description: error instanceof Error ? error.message : "El pedido podría estar desincronizado",
           variant: "destructive",
         });
-      } finally {
-        setActualizandoItem(false);
       }
     },
     [pedidoActivo, mesaSeleccionada, recargarOperativo, toast]
@@ -939,10 +1029,20 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     if (!pedidoActivo) return;
     try {
       setFacturandoCuenta(true);
+      const montoBase = pedidoActivo.total;
+      const montoConPropina = facturaForm.propina > 0
+        ? Math.round(montoBase * (1 + facturaForm.propina / 100))
+        : montoBase;
+      const notasFinales = [
+        facturaForm.notas,
+        facturaForm.propina > 0 ? `Propina ${facturaForm.propina}% incluida` : "",
+      ].filter(Boolean).join(" | ") || undefined;
+
       const resultado = await restauranteApi.facturarPedido(pedidoActivo.id, {
         metodoPago: facturaForm.metodoPago,
         clienteId: facturaForm.clienteId === "sin-cliente" ? undefined : facturaForm.clienteId,
-        notas: facturaForm.notas || undefined,
+        notas: notasFinales,
+        propina: facturaForm.propina > 0 ? montoConPropina - montoBase : undefined,
       });
       setTicketData(
         construirTicketRestaurante({
@@ -976,7 +1076,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
     const itemsExtraer = Object.entries(divisionItems)
       .filter(([, cant]) => cant > 0)
       .map(([itemId, cantidad]) => ({ itemId, cantidadAExtraer: cantidad }));
-    
+
     if (itemsExtraer.length === 0) {
       toast({ title: "Sin selección", description: "Selecciona al menos un producto", variant: "destructive" });
       return;
@@ -1018,7 +1118,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
 
   const facturarFraccionadoHandler = useCallback(async (pagos: { metodoPago: MetodoPagoRestaurante; monto: number }[]) => {
     if (!pedidoActivo) return;
-    
+
     try {
       setDividiendoCuenta(true);
       const resultado = await restauranteApi.pagoFraccionado(pedidoActivo.id, {

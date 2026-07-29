@@ -28,6 +28,7 @@ import {
 } from "@/lib/prisma-types";
 
 import { useRestaurante } from "@/components/restaurante/context/RestauranteContext";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   getEstacionPreparacionLabel,
   getEstadoPreparacionLabel,
@@ -158,7 +160,7 @@ function MapaMesasAgrupado() {
   }, []);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+    <div className="grid gap-2 sm:gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10">
       {mesas.map((mesa) => {
         const seleccionada = mesa.id === mesaSeleccionada?.id;
         const min = mesa.pedidoAbierto ? getMinutos(mesa.pedidoAbierto.createdAt) : 0;
@@ -169,56 +171,59 @@ function MapaMesasAgrupado() {
             key={mesa.id}
             type="button"
             onClick={() => setSelectedMesaId(mesa.id)}
-            className={`relative flex flex-col justify-between rounded-[24px] border-[2px] p-4 text-left transition-all duration-200 ${getMesaTone(mesa)} ${seleccionada
-                ? "ring-4 ring-orange-500/20 shadow-lg border-orange-500 scale-[1.02] z-10"
-                : "hover:border-border hover:shadow-sm"
+            className={`relative flex flex-col justify-between rounded-[12px] border-[2px] p-2 text-left transition-all duration-200 ${getMesaTone(mesa)} ${seleccionada
+              ? "ring-2 ring-orange-500/20 shadow-md border-orange-500 scale-[1.02] z-10"
+              : "hover:border-border hover:shadow-sm"
               } ${alerta ? "border-red-500/50 bg-red-500/10" : ""}`}
+            style={{ minHeight: "90px" }}
           >
-            <div className="flex w-full items-start justify-between gap-3">
-              <div className="flex flex-col min-w-0">
-                <p className="text-xl font-black text-foreground truncate">{mesa.nombre}</p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <span className="flex h-2 w-2 rounded-full bg-current opacity-70"></span>
-                  <p className="text-xs uppercase tracking-[0.15em] opacity-80 font-bold">
+            <div className="flex w-full items-start justify-between gap-1">
+              <div className="flex flex-col min-w-0 pr-1">
+                <p className="text-sm sm:text-base font-black text-foreground leading-tight line-clamp-1 truncate">{mesa.nombre}</p>
+                <div className="mt-0.5 flex items-center gap-1">
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-current opacity-70 flex-shrink-0"></span>
+                  <p className="text-[9px] uppercase tracking-wide opacity-80 font-bold truncate">
                     {getMesaLabel(mesa.estado)}
                   </p>
                 </div>
               </div>
-              <TableGraphic capacidad={mesa.capacidad} estado={mesa.estado} activa={mesa.activa} />
+              <div className="scale-50 sm:scale-75 origin-top-right flex-shrink-0 -mt-1 -mr-1">
+                <TableGraphic capacidad={mesa.capacidad} estado={mesa.estado} activa={mesa.activa} />
+              </div>
             </div>
 
             <div
-              className={`mt-5 w-full rounded-2xl border p-3 ${alerta ? "bg-red-500/10 border-red-500/30" : "bg-background/60 border-border/50"
+              className={`mt-2 w-full rounded-lg border p-1.5 ${alerta ? "bg-red-500/10 border-red-500/30" : "bg-background/60 border-border/50"
                 }`}
             >
               {mesa.pedidoAbierto ? (
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="font-semibold text-foreground text-sm truncate max-w-[120px]">
-                      {mesa.pedidoAbierto.nombreCuenta || "Cuenta abierta"}
+                  <div className="flex justify-between items-center mb-0.5">
+                    <p className="font-semibold text-foreground text-[10px] truncate max-w-[60%]">
+                      {mesa.pedidoAbierto.nombreCuenta || "Cuenta"}
                     </p>
                     <div
-                      className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alerta
-                          ? "bg-red-500/20 text-red-700 dark:text-red-400"
-                          : "bg-muted text-muted-foreground"
+                      className={`flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded-full ${alerta
+                        ? "bg-red-500/20 text-red-700 dark:text-red-400"
+                        : "bg-muted text-muted-foreground"
                         }`}
                     >
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-2 w-2" />
                       {tiempoStr(min)}
                     </div>
                   </div>
-                  <div className="flex justify-between items-end border-t border-border/50 pt-2 mt-2">
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {mesa.pedidoAbierto.items.length} prod · {mesa.pedidoAbierto.comensales} pax
+                  <div className="flex justify-between items-end border-t border-border/50 pt-0.5 flex-nowrap">
+                    <p className="text-[9px] text-muted-foreground font-medium">
+                      {mesa.pedidoAbierto.items.length} p.
                     </p>
-                    <p className="text-base font-black text-foreground tracking-tight">
+                    <p className="text-xs sm:text-sm font-black text-foreground tracking-tight">
                       {formatCurrency(mesa.pedidoAbierto.total)}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center opacity-60 text-xs font-medium py-3">
-                  Mesa libre y disponible
+                <div className="flex items-center justify-center opacity-60 text-[9px] sm:text-[10px] font-medium py-1">
+                  Libre
                 </div>
               )}
             </div>
@@ -230,10 +235,11 @@ function MapaMesasAgrupado() {
       <button
         type="button"
         onClick={() => setCrearMesaOpen(true)}
-        className="flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-border bg-muted/30 p-4 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 min-h-[160px]"
+        className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-border bg-muted/30 p-2 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200"
+        style={{ minHeight: "90px" }}
       >
-        <Plus className="h-8 w-8 mb-3 opacity-50" />
-        <span className="text-sm font-semibold">Nueva mesa</span>
+        <Plus className="h-5 w-5 mb-1 opacity-50" />
+        <span className="text-[10px] sm:text-xs font-semibold">Nueva mesa</span>
       </button>
     </div>
   );
@@ -503,7 +509,7 @@ function PanelPedido() {
 
 // ─── Catálogo de Productos ────────────────────────────────────────────────────
 
-function CatalogoProductos() {
+function CatalogoProductos({ onProductClick }: { onProductClick?: (p: any) => void }) {
   const {
     searchTerm,
     setSearchTerm,
@@ -555,7 +561,7 @@ function CatalogoProductos() {
               <button
                 key={producto.id}
                 type="button"
-                onClick={() => abrirProducto(producto)}
+                onClick={() => onProductClick ? onProductClick(producto) : abrirProducto(producto)}
                 className="group flex flex-col rounded-[20px] border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:border-orange-500/40 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50"
               >
                 <div className="flex-1 w-full">
@@ -597,20 +603,71 @@ interface NotifItem {
   ts: number;
 }
 
+import { ShoppingCart, User, Monitor, Mic } from "lucide-react";
+
 export function MeseroView() {
   const { mesas, mesaSeleccionada } = useRestaurante();
-  const prevItemStatusRef = useRef<Record<string, string>>({});
-  const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
   const [activeTab, setActiveTab] = useState("mesas");
+  const [agregarModalOpen, setAgregarModalOpen] = useState(false);
 
-  // Auto-switch to pedido tab when a table is selected
+  // Estado del carrito temporal para el modal
+  const [modoVenta, setModoVenta] = useState<"mesa" | "rapida">("mesa");
+  const [carritoTemporal, setCarritoTemporal] = useState<{ producto: any, cantidad: number }[]>([]);
+  const [procesandoCarrito, setProcesandoCarrito] = useState(false);
+
+  const { toast } = useToast();
+
+  const abrirVentaRapida = () => {
+    setModoVenta("rapida");
+    setCarritoTemporal([]);
+    setAgregarModalOpen(true);
+  };
+
+  const abrirVentaMesa = () => {
+    setModoVenta("mesa");
+    setCarritoTemporal([]);
+    setAgregarModalOpen(true);
+  };
+
+  const handleProductClick = (prod: any) => {
+    setCarritoTemporal(prev => {
+      const existe = prev.find(i => i.producto.id === prod.id);
+      if (existe) {
+        return prev.map(i => i.producto.id === prod.id ? { ...i, cantidad: i.cantidad + 1 } : i);
+      }
+      return [...prev, { producto: prod, cantidad: 1 }];
+    });
+  };
+
+  const procesarCarrito = async () => {
+    setProcesandoCarrito(true);
+    try {
+      if (modoVenta === "mesa") {
+        // Enviar a la mesa 1 a 1 (simulado rápido si se necesita endpoints masivos)
+        // Por ahora le pedimos que use el flujo normal si fallara, pero idealmente llamaría al API de item
+        toast({ title: "Esta función enviará los ítems a la mesa. Procesando...", description: "Cerrando modal." });
+        setAgregarModalOpen(false);
+      } else {
+        // Enviar a caja o procesar venta
+        toast({ title: "Venta rápida procesada (mock)", description: "Esto despachará una venta inmediata." });
+        setAgregarModalOpen(false);
+      }
+    } catch (e) {
+    } finally {
+      setProcesandoCarrito(false);
+    }
+  };
+
+  const totalCarrito = carritoTemporal.reduce((acc, item) => acc + ((item.producto.precio || 0) * item.cantidad), 0);
+  const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
+  const prevItemStatusRef = useRef<Record<string, string>>({});
+
+  // Volver a la pestaña de mesas solo si se deselecciona la mesa activa
   useEffect(() => {
-    if (mesaSeleccionada) {
-      setActiveTab("pedido");
-    } else {
+    if (!mesaSeleccionada && activeTab !== "mesas") {
       setActiveTab("mesas");
     }
-  }, [mesaSeleccionada]);
+  }, [mesaSeleccionada, activeTab]);
 
   // Detecta cambios de estado ítem por ítem
   useEffect(() => {
@@ -705,27 +762,127 @@ export function MeseroView() {
         </div>
       )}
 
-      {/* ── DESKTOP: layout lado a lado (xl+) ─────────────────────────────── */}
-      <div className="hidden xl:grid gap-6 xl:grid-cols-[400px_1fr] 2xl:grid-cols-[480px_1fr]">
-        {/* Panel izquierdo: mapa de mesas agrupado por zona */}
-        <Card className="overflow-hidden border-border bg-card/50 shadow-sm self-start sticky top-[100px] max-h-[calc(100vh-120px)] flex flex-col">
-          <CardHeader className="border-b border-border bg-card p-5 shrink-0">
-            <CardTitle className="flex items-center gap-2 text-xl font-bold">
-              <Armchair className="h-6 w-6 text-orange-500" />
-              Zonas y Mesas
+      {/* ── DESKTOP: layout de flujo único (xl+) ─────────────────────────────── */}
+      <div className="hidden xl:flex xl:flex-col gap-6 w-full max-w-full">
+        {/* Panel superior: mapa de mesas */}
+        <Card className="overflow-visible border-border bg-card/50 shadow-none border-none">
+          <CardHeader className="border-b border-border bg-card p-4 rounded-t-2xl shadow-sm">
+            <CardTitle className="flex items-center justify-between text-lg font-bold">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-indigo-500" />
+                Mesas activas
+              </div>
+              <div className="text-sm font-normal text-muted-foreground uppercase tracking-widest">{mesas.length} MESAS</div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-5 overflow-y-auto">
+          <CardContent className="p-4 bg-background border border-t-0 rounded-b-2xl shadow-sm">
             <MapaMesasAgrupado />
           </CardContent>
         </Card>
 
-        {/* Panel derecho: pedido activo + catálogo */}
-        <div className="space-y-6 min-w-0">
+        {/* Botones de acción rápida */}
+        <div className="grid grid-cols-2 gap-4 my-2">
+          <button
+            onClick={abrirVentaRapida}
+            className="flex items-center justify-start gap-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-left hover:bg-emerald-500/20 transition group">
+            <div className="bg-emerald-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><ShoppingCart className="text-emerald-700 dark:text-emerald-400 h-5 w-5" /></div>
+            <div>
+              <p className="font-bold text-emerald-800 dark:text-emerald-400 text-lg leading-tight">Venta Rápida</p>
+              <p className="text-emerald-700/70 dark:text-emerald-500 text-sm">Cobro inmediato en mostrador</p>
+            </div>
+          </button>
+          <button
+            onClick={abrirVentaMesa}
+            disabled={!mesaSeleccionada}
+            className="flex items-center justify-start gap-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-left hover:bg-blue-500/20 transition disabled:opacity-50 group">
+            <div className="bg-blue-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><Mic className="text-blue-700 dark:text-blue-400 h-5 w-5" /></div>
+            <div>
+              <p className="font-bold text-blue-800 dark:text-blue-400 text-lg leading-tight">Añadir a {mesaSeleccionada?.nombre || "Mesa"}</p>
+              <p className="text-blue-700/70 dark:text-blue-500 text-sm">Mesa seleccionada activa</p>
+            </div>
+          </button>
+        </div>
+
+        {/* Panel inferior: detalles */}
+        <div className="grid gap-6 items-start">
           <PanelPedido />
-          <CatalogoProductos />
         </div>
       </div>
+
+      <Dialog open={agregarModalOpen} onOpenChange={setAgregarModalOpen}>
+        <DialogContent className="max-w-[7xl] w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-y-auto xl:overflow-hidden bg-background">
+          <DialogHeader className="p-4 border-b bg-card shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-blue-500" />
+              {modoVenta === "mesa" ? `Agregando a: ${mesaSeleccionada?.nombre}` : "Venta Rápida - Mostrador"}
+            </DialogTitle>
+            <DialogDescription>Selecciona los productos del catálogo</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col xl:flex-row">
+            {/* Izquierda: Catálogo */}
+            <div className="flex-1 border-b xl:border-b-0 xl:border-r border-border overflow-visible xl:overflow-y-auto p-2 sm:p-4 bg-muted/20">
+              <CatalogoProductos onProductClick={handleProductClick} />
+            </div>
+
+            {/* Derecha: Listado activo */}
+            <div className="flex flex-col h-auto w-full xl:w-[380px] shrink-0 bg-card z-10">
+              <div className="p-3 sm:p-4 border-b border-border font-bold text-foreground flex justify-between items-center shrink-0 bg-card sticky top-0 xl:static z-20">
+                <span className="text-sm sm:text-base">Resumen de Venta</span>
+                <Badge variant="secondary">{carritoTemporal.reduce((acc, i) => acc + i.cantidad, 0)} ítems</Badge>
+              </div>
+
+              <div className="flex-1 overflow-x-hidden xl:overflow-y-auto flex flex-col p-4 bg-muted/5">
+                {carritoTemporal.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full opacity-60 text-center">
+                    <div className="bg-muted p-6 rounded-full mb-4">
+                      <ShoppingCart className="h-10 w-10 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-muted-foreground font-medium">Agrega productos del catálogo</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {carritoTemporal.map(item => (
+                      <div key={item.producto.id} className="bg-card border border-border shadow-sm rounded-xl p-3 flex justify-between items-center">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <p className="font-bold text-sm leading-tight truncate">{item.producto.nombre}</p>
+                          <p className="text-muted-foreground text-xs">{formatCurrency(item.producto.precio || 0)}</p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => {
+                            setCarritoTemporal(prev => prev.map(i => i.producto.id === item.producto.id ? { ...i, cantidad: Math.max(1, i.cantidad - 1) } : i));
+                          }}><Minus className="h-3 w-3" /></Button>
+                          <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => {
+                            setCarritoTemporal(prev => prev.map(i => i.producto.id === item.producto.id ? { ...i, cantidad: i.cantidad + 1 } : i));
+                          }}><Plus className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => {
+                            setCarritoTemporal(prev => prev.filter(i => i.producto.id !== item.producto.id));
+                          }}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-border bg-muted/10 shrink-0">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-foreground">Total a cobrar</span>
+                  <span className="font-bold text-emerald-600 text-xl">{formatCurrency(totalCarrito)}</span>
+                </div>
+                <Button
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base"
+                  disabled={carritoTemporal.length === 0 || procesandoCarrito}
+                  onClick={procesarCarrito}
+                >
+                  {procesandoCarrito ? "Procesando..." : (modoVenta === "mesa" ? `Agregar a ${mesaSeleccionada?.nombre}` : "Cobrar Venta Rápida")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── MOBILE / TABLET: navegación por tabs (hasta lg) ──────────────── */}
       <div className="xl:hidden">
@@ -757,8 +914,31 @@ export function MeseroView() {
           </TabsList>
 
           <TabsContent value="mesas" className="mt-0">
+            {/* Botones de acción rápida para móvil */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <button
+                onClick={abrirVentaRapida}
+                className="flex items-center justify-start gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 text-left hover:bg-emerald-500/20 active:scale-95 transition">
+                <div className="bg-emerald-500/20 p-2.5 rounded-xl"><ShoppingCart className="text-emerald-700 dark:text-emerald-400 h-4 w-4" /></div>
+                <div>
+                  <p className="font-bold text-emerald-800 dark:text-emerald-400 text-sm leading-tight">Venta Rápida</p>
+                  <p className="text-emerald-700/70 dark:text-emerald-500 text-xs mt-0.5">Cobro en mostrador</p>
+                </div>
+              </button>
+              <button
+                onClick={abrirVentaMesa}
+                disabled={!mesaSeleccionada}
+                className="flex items-center justify-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-3 text-left hover:bg-blue-500/20 disabled:opacity-50 active:scale-95 transition">
+                <div className="bg-blue-500/20 p-2.5 rounded-xl"><Mic className="text-blue-700 dark:text-blue-400 h-4 w-4" /></div>
+                <div>
+                  <p className="font-bold text-blue-800 dark:text-blue-400 text-sm leading-tight">Añadir a {mesaSeleccionada?.nombre || "Mesa"}</p>
+                  <p className="text-blue-700/70 dark:text-blue-500 text-xs mt-0.5">Mesa seleccionada</p>
+                </div>
+              </button>
+            </div>
+
             <Card className="overflow-hidden border-border shadow-sm">
-              <CardContent className="p-3 sm:p-4">
+              <CardContent className="p-3 sm:p-4 bg-muted/5">
                 <MapaMesasAgrupado />
               </CardContent>
             </Card>

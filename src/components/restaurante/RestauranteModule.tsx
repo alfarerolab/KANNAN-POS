@@ -101,7 +101,7 @@ function RestauranteHeader() {
             {badgeLabel}
           </Badge>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {esBar ? "Operación de barra y comandas" : "Operación de mesas y comandas"}
+            {esBar ? "Operación de barra y comandas" : "Mesas y comandas"}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -312,8 +312,8 @@ function DialogsGlobales() {
                           key={mp.mesa.id}
                           type="button"
                           className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition ${isSelected
-                              ? "border-destructive/40 bg-destructive/10"
-                              : "border-border hover:border-border"
+                            ? "border-destructive/40 bg-destructive/10"
+                            : "border-border hover:border-border"
                             }`}
                           onClick={() => setDesunirMesaId(isSelected ? "sin-mesa" : mp.mesa.id)}
                         >
@@ -367,7 +367,49 @@ function DialogsGlobales() {
         <DialogContent>
           <DialogHeader><DialogTitle>Cobrar cuenta</DialogTitle><DialogDescription>Cierra el consumo de la mesa, genera la venta e imprime el ticket final.</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-2xl bg-muted/50 p-4"><p className="text-sm text-muted-foreground">Total a cobrar</p><p className="mt-1 text-3xl font-semibold text-foreground">{formatCurrency(pedidoActivo?.total || 0)}</p></div>
+            {/* Totales con propina */}
+            <div className="rounded-2xl bg-muted/50 p-4 space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Subtotal consumo</span>
+                <span>{formatCurrency(pedidoActivo?.total || 0)}</span>
+              </div>
+              {facturaForm.propina > 0 && (
+                <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400 font-medium">
+                  <span>Propina ({facturaForm.propina}%)</span>
+                  <span>+ {formatCurrency(Math.round((pedidoActivo?.total || 0) * facturaForm.propina / 100))}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-border pt-2 mt-1">
+                <p className="text-sm font-semibold text-foreground">Total a cobrar</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(facturaForm.propina > 0
+                    ? Math.round((pedidoActivo?.total || 0) * (1 + facturaForm.propina / 100))
+                    : (pedidoActivo?.total || 0))}
+                </p>
+              </div>
+            </div>
+
+            {/* Propina opcional */}
+            <div className="space-y-2">
+              <Label>Propina (opcional)</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFacturaForm((p) => ({ ...p, propina: 0 }))}
+                  className={`flex-1 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all ${facturaForm.propina === 0 ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:border-foreground/50"}`}
+                >
+                  Sin propina
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFacturaForm((p) => ({ ...p, propina: 5 }))}
+                  className={`flex-1 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all ${facturaForm.propina === 5 ? "border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-400" : "border-border text-muted-foreground hover:border-orange-400/50"}`}
+                >
+                  5% propina
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Método de pago</Label>
               <Select value={facturaForm.metodoPago} onValueChange={(v) => setFacturaForm((p) => ({ ...p, metodoPago: v as typeof facturaForm.metodoPago }))}>
@@ -528,7 +570,7 @@ function RestauranteContenido() {
   return (
     <div className="space-y-6">
       <RestauranteHeader />
-      {rolVista === "mesero" && (<><div className="flex justify-end"><Button className="bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-sm" onClick={() => setCrearMesaOpen(true)}><Plus className="mr-2 h-4 w-4" />Nueva mesa</Button></div><MeseroView /></>)}
+      {rolVista === "mesero" && <MeseroView />}
       {rolVista === "cocina" && <CocinaView />}
       {rolVista === "caja" && <CajaView />}
       <DialogsGlobales />

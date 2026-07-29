@@ -164,8 +164,23 @@ export default function ProductsPage() {
           precioCosto: producto.precioCosto ? Number(producto.precioCosto) : null,
         }));
 
+        const categoriasConProductos = new Set(
+          productosValidados
+            .map(p => p.categoriaId)
+            .filter(id => id != null)
+        );
+
+        let categoriasOrganicas = categoriasArray.filter(cat =>
+          categoriasConProductos.has(cat.id)
+        );
+
+        const hasSinCategoria = productosValidados.some(p => !p.categoriaId);
+        if (hasSinCategoria && !categoriasOrganicas.some(c => c.id === "sin_categoria")) {
+          categoriasOrganicas = [{ id: "sin_categoria", nombre: "Sin categoría" }, ...categoriasOrganicas];
+        }
+
         setProductos(productosValidados);
-        setCategorias(categoriasArray);
+        setCategorias(categoriasOrganicas);
 
         // Debug de stock
         const stockStats = {
@@ -376,7 +391,7 @@ export default function ProductsPage() {
 
       // Filtro de categoría
       const categoriaMatch = filtroCategoria === "todas" ||
-        producto.categoriaId === filtroCategoria;
+        (filtroCategoria === "sin_categoria" ? !producto.categoriaId : producto.categoriaId === filtroCategoria);
 
       // Filtro de stock mejorado
       const stockMatch = (() => {
@@ -521,7 +536,7 @@ export default function ProductsPage() {
                     <span className="sm:hidden">Producto</span>
                   </Button>
                 </Link>
-                
+
                 {configuracion?.tipoNegocio === 'RESTAURANTE' || configuracion?.tipoNegocio === 'BAR' ? (
                   <Link href="/dashboard/productos/combos/nuevo" className="w-full sm:w-auto">
                     <Button variant="secondary" className="flex items-center justify-center gap-2 px-4 sm:px-6 h-10 sm:h-11 shadow-sm bg-orange-500/15 text-orange-700 dark:text-orange-400 hover:bg-orange-200 border border-orange-500/30 transition-all duration-200 w-full">
@@ -750,11 +765,10 @@ export default function ProductsPage() {
                               </TableCell>
                               <TableCell className="py-2 px-2 lg:px-4">
                                 <div className="flex items-center gap-2">
-                                  <span className={`font-bold text-base ${
-                                    producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
-                                    producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
-                                    "text-green-600 dark:text-green-400"
-                                  }`}>
+                                  <span className={`font-bold text-base ${producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
+                                      producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
+                                        "text-green-600 dark:text-green-400"
+                                    }`}>
                                     {producto.enStock}
                                   </span>
                                   <Badge
@@ -902,11 +916,10 @@ export default function ProductsPage() {
 
                                     <div className="flex justify-between items-center">
                                       <span className="text-xs text-muted-foreground">Stock:</span>
-                                      <span className={`font-semibold text-sm ${
-                                        producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
-                                        producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
-                                        "text-green-600 dark:text-green-400"
-                                      }`}>
+                                      <span className={`font-semibold text-sm ${producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
+                                          producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
+                                            "text-green-600 dark:text-green-400"
+                                        }`}>
                                         {producto.enStock} / {producto.stockMinimo}
                                       </span>
                                     </div>
