@@ -46,7 +46,12 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
+        dns: false,
+        child_process: false,
       };
+    }
+    if (config.resolve.alias) {
+      config.resolve.alias['node:diagnostics_channel'] = false;
     }
     return config;
   },
