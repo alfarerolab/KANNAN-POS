@@ -10,6 +10,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['ioredis'],
+  },
   reactStrictMode: true,
   compress: true,
   compiler: {
