@@ -97,6 +97,16 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user?.contrasena) {
+            await db.auditoriaLog.create({
+              data: {
+                tabla: 'Auth',
+                registroId: credentials.email,
+                accion: 'LOGIN_FALLIDO',
+                usuarioEmail: credentials.email,
+                direccionIP: clientIp,
+                notas: 'Usuario no encontrado',
+              }
+            }).catch(() => { });
             return null;
           }
 
@@ -106,6 +116,17 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
+            await db.auditoriaLog.create({
+              data: {
+                tabla: 'Auth',
+                registroId: credentials.email,
+                accion: 'LOGIN_FALLIDO',
+                usuarioEmail: credentials.email,
+                direccionIP: clientIp,
+                notas: 'Contraseña incorrecta',
+                empresaId: user.empresaId,
+              }
+            }).catch(() => { });
             return null;
           }
 
