@@ -3,7 +3,6 @@
  * Rate limiting en memoria para proteger endpoints críticos.
  * En producción se recomienda usar Redis para entornos multi-instancia.
  */
-import Redis from 'ioredis';
 
 interface RateLimitEntry {
   count: number;
@@ -61,21 +60,24 @@ export interface RateLimitResult {
   retryAfterMs: number;
 }
 
-let redisClient: Redis | null = null;
+let redisClient: any = null;
 try {
-  if (process.env.REDIS_URL || process.env.NODE_ENV === 'production') {
-    redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-      maxRetriesPerRequest: 1,
-      retryStrategy(times) {
-        if (times > 3) return null;
-        return Math.min(times * 50, 2000);
-      }
-    });
+  if (typeof window === 'undefined') {
+    if (process.env.REDIS_URL || process.env.NODE_ENV === 'production') {
+      const Redis = eval("require('ioredis')");
+      redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+        maxRetriesPerRequest: 1,
+        retryStrategy(times: number) {
+          if (times > 3) return null;
+          return Math.min(times * 50, 2000);
+        }
+      });
 
-    redisClient.on('error', (err) => {
-      console.warn('Redis error, falling back to memory rate limiting.', err.message);
-      redisClient = null;
-    });
+      redisClient.on('error', (err: any) => {
+        console.warn('Redis error, falling back to memory rate limiting.', err.message);
+        redisClient = null;
+      });
+    }
   }
 } catch (e) {
   console.warn('Failed to initialize Redis, falling back to memory.');
