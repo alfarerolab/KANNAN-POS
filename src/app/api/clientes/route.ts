@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
 
     // Opciones de búsqueda y paginación
     const busqueda = searchParams.get("busqueda");
-    const pagina = Number.parseInt(searchParams.get("pagina") || "1");
-    const limite = Number.parseInt(searchParams.get("limite") || "20");
+    const pagina = Math.max(1, Number.parseInt(searchParams.get("pagina") || "1") || 1);
+    const limite = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limite") || "20") || 20));
     const omitir = (pagina - 1) * limite;
 
     // Construir la consulta
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(cliente, { status: 201 });
   } catch (error) {
     console.error("Error al crear cliente:", error);
-    
+
     // Manejar errores específicos de Prisma
     if (error instanceof Error) {
       if (error.message.includes('Unique constraint')) {
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    
+
     return NextResponse.json(
       { mensaje: "Error interno del servidor al crear cliente" },
       { status: 500 }

@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
   // Procesar datos para los gráficos
   const getEmpresasPorTipo = () => {
     if (!analytics?.metricas.empresas.distribucionTipos) return [];
-    
+
     return Object.entries(analytics.metricas.empresas.distribucionTipos).map(([tipo, datos]) => ({
       tipo,
       total: datos.total,
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
 
   const getCrecimientoTemporal = () => {
     if (!analytics?.metricas.empresas.crecimientoPorMes) return [];
-    
+
     return Object.entries(analytics.metricas.empresas.crecimientoPorMes).map(([mes, cantidad]) => ({
       mes,
       empresasNuevas: cantidad,
@@ -203,7 +203,7 @@ export default function AnalyticsPage() {
 
   const getFuncionalidadesMasUsadas = () => {
     if (!analytics?.metricas.funcionalidades) return [];
-    
+
     return Object.entries(analytics.metricas.funcionalidades).map(([funcionalidad, datos]) => ({
       funcionalidad,
       usos: datos.habilitadas,
@@ -215,21 +215,21 @@ export default function AnalyticsPage() {
   const getTotalEmpresas = () => {
     const distribucion = analytics?.metricas.empresas.distribucionTipos;
     if (!distribucion) return 0;
-    
+
     return Object.values(distribucion).reduce((sum, datos) => sum + datos.total, 0);
   };
 
   const getEmpresasActivas = () => {
     const distribucion = analytics?.metricas.empresas.distribucionTipos;
     if (!distribucion) return 0;
-    
+
     return Object.values(distribucion).reduce((sum, datos) => sum + datos.activas, 0);
   };
 
   const getTotalUsuarios = () => {
     const usuariosStats = analytics?.metricas.usuarios.estadisticas;
     if (!usuariosStats) return 0;
-    
+
     return usuariosStats.reduce((sum, stat) => sum + stat._count.id, 0);
   };
 
@@ -364,7 +364,7 @@ export default function AnalyticsPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ tipo, total }) => `${tipo}: ${total}`}
+                      label={(props: any) => `${props.tipo}: ${props.total}`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="total"

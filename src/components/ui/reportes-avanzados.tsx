@@ -400,8 +400,8 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {reporteSeleccionado === 'mascotas' ? 'Mascotas atendidas' :
-                   reporteSeleccionado === 'servicios' ? 'Servicios realizados' :
-                   'Transacciones'}
+                    reporteSeleccionado === 'servicios' ? 'Servicios realizados' :
+                      'Transacciones'}
                 </p>
               </div>
               <div>
@@ -451,7 +451,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="cantidad"
-                        label={({ nombre, cantidad }) => `${nombre}: ${cantidad}`}
+                        label={(props: any) => `${props.nombre}: ${props.cantidad}`}
                       >
                         {datosReporte.especies.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />

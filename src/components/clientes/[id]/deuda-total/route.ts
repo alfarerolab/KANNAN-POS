@@ -61,23 +61,23 @@ export async function GET(
 
     // Calcular totales
     const deudaTotal = ventasFiadas.reduce(
-      (sum, venta) => sum + Number(venta.saldoPendiente || 0),
+      (sum: number, venta: any) => sum + Number(venta.saldoPendiente || 0),
       0
     );
 
     const totalOriginal = ventasFiadas.reduce(
-      (sum, venta) => sum + Number(venta.total),
+      (sum: number, venta: any) => sum + Number(venta.total),
       0
     );
 
     const totalPagado = ventasFiadas.reduce(
-      (sum, venta) => sum + Number(venta.montoPagado || 0),
+      (sum: number, venta: any) => sum + Number(venta.montoPagado || 0),
       0
     );
 
     // Estadísticas adicionales
     const ventasVencidas = ventasFiadas.filter(
-      (v) => v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
+      (v: any) => v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
     ).length;
 
     const ventaMasAntigua = ventasFiadas.length > 0 ? ventasFiadas[0] : null;
@@ -97,7 +97,7 @@ export async function GET(
         cantidadVentas: ventasFiadas.length,
         ventasVencidas,
       },
-      ventas: ventasFiadas.map((venta) => ({
+      ventas: ventasFiadas.map((venta: any) => ({
         id: venta.id,
         fechaCreacion: venta.fechaCreacion,
         total: Number(venta.total),
@@ -109,25 +109,25 @@ export async function GET(
         cantidadPagos: venta.pagosFiados?.length || 0,
         ultimoPago: venta.pagosFiados?.[0]
           ? {
-              monto: Number(venta.pagosFiados[0].monto),
-              fecha: venta.pagosFiados[0].fechaPago,
-              metodoPago: venta.pagosFiados[0].metodoPago,
-            }
+            monto: Number(venta.pagosFiados[0].monto),
+            fecha: venta.pagosFiados[0].fechaPago,
+            metodoPago: venta.pagosFiados[0].metodoPago,
+          }
           : null,
       })),
       ventaMasAntigua: ventaMasAntigua
         ? {
-            id: ventaMasAntigua.id,
-            fecha: ventaMasAntigua.fechaCreacion,
-            saldo: Number(ventaMasAntigua.saldoPendiente || 0),
-          }
+          id: ventaMasAntigua.id,
+          fecha: ventaMasAntigua.fechaCreacion,
+          saldo: Number(ventaMasAntigua.saldoPendiente || 0),
+        }
         : null,
       ventaMasReciente: ventaMasReciente
         ? {
-            id: ventaMasReciente.id,
-            fecha: ventaMasReciente.fechaCreacion,
-            saldo: Number(ventaMasReciente.saldoPendiente || 0),
-          }
+          id: ventaMasReciente.id,
+          fecha: ventaMasReciente.fechaCreacion,
+          saldo: Number(ventaMasReciente.saldoPendiente || 0),
+        }
         : null,
     });
   } catch (error) {

@@ -24,18 +24,18 @@ import {
   Calendar as CalendarIcon,
   Eye
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  BarChart as RechartsBarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
+import {
+  LineChart,
+  Line,
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
   Area,
   AreaChart
@@ -138,7 +138,7 @@ const formatearFecha = (fecha: string): string => {
 
 export default function SuscripcionesPage() {
   const router = useRouter();
-  
+
   const [datos, setDatos] = useState<DatosSuscripciones>({
     suscripciones: [],
     estadisticas: {
@@ -159,7 +159,7 @@ export default function SuscripcionesPage() {
       ultimaActualizacion: new Date().toISOString()
     }
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -174,14 +174,14 @@ export default function SuscripcionesPage() {
   const cargarSuscripciones = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/administrador/suscripciones', {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           router.push('/login');
@@ -189,10 +189,10 @@ export default function SuscripcionesPage() {
         }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-      
+
       const data: DatosSuscripciones = await response.json();
       setDatos(data);
-      
+
     } catch (error) {
       console.error('Error al cargar suscripciones:', error);
       setError(error instanceof Error ? error.message : 'Error desconocido');
@@ -210,7 +210,7 @@ export default function SuscripcionesPage() {
   const suscripcionesFiltradas = useMemo(() => {
     return datos.suscripciones.filter(s => {
       const matchesSearch = s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           s.email.toLowerCase().includes(searchTerm.toLowerCase());
+        s.email.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesEstado = filtroEstado === "todos" || s.estado === filtroEstado;
       const matchesTipoNegocio = filtroTipoNegocio === "todos" || s.tipoNegocio === filtroTipoNegocio;
       return matchesSearch && matchesEstado && matchesTipoNegocio;
@@ -218,8 +218,8 @@ export default function SuscripcionesPage() {
   }, [datos.suscripciones, searchTerm, filtroEstado, filtroTipoNegocio]);
 
   // Obtener tipos de negocio únicos
-  const tiposNegocio = useMemo(() => 
-    [...new Set(datos.suscripciones.map(s => s.tipoNegocio))], 
+  const tiposNegocio = useMemo(() =>
+    [...new Set(datos.suscripciones.map(s => s.tipoNegocio))],
     [datos.suscripciones]
   );
 
@@ -227,10 +227,10 @@ export default function SuscripcionesPage() {
   const metricas = useMemo(() => {
     const { estadisticas } = datos;
     const arr = estadisticas.ingresosMensuales * 12;
-    const churnRate = estadisticas.totalSuscripciones > 0 
-      ? Math.round((estadisticas.vencidas / estadisticas.totalSuscripciones) * 100 * 100) / 100 
+    const churnRate = estadisticas.totalSuscripciones > 0
+      ? Math.round((estadisticas.vencidas / estadisticas.totalSuscripciones) * 100 * 100) / 100
       : 0;
-    
+
     return {
       ...estadisticas,
       arr,
@@ -274,7 +274,7 @@ export default function SuscripcionesPage() {
       }
 
       const resultado = await response.json();
-      
+
       // Mostrar mensaje de éxito (reemplaza con tu sistema de toast)
       // Recargar datos
       await cargarSuscripciones();
@@ -334,7 +334,7 @@ export default function SuscripcionesPage() {
 
     const csv = [
       Object.keys(datosExportar[0] || {}).join(','),
-      ...datosExportar.map(row => Object.values(row).map(val => 
+      ...datosExportar.map(row => Object.values(row).map(val =>
         typeof val === 'string' && val.includes(',') ? `"${val}"` : val
       ).join(','))
     ].join('\n');
@@ -384,7 +384,7 @@ export default function SuscripcionesPage() {
           </p>
           {datos.metadata.ultimaActualizacion && (
             <p className="text-xs text-muted-foreground mt-1">
-              Última actualización: {formatearFecha(datos.metadata.ultimaActualizacion)} - 
+              Última actualización: {formatearFecha(datos.metadata.ultimaActualizacion)} -
               {new Date(datos.metadata.ultimaActualizacion).toLocaleTimeString('es-CO')}
             </p>
           )}
@@ -511,7 +511,6 @@ export default function SuscripcionesPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    // @ts-expect-error Mismatch de tipos Prisma u obj temporal
                     label={({ name, value, percent = 0 }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
                     outerRadius={80}
                     fill="#8884d8"
@@ -540,11 +539,11 @@ export default function SuscripcionesPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value, name) => [
                       name === 'ingresos' ? formatearMoneda(Number(value)) : value,
                       name === 'ingresos' ? 'Ingresos' : 'Cantidad'
-                    ]} 
+                    ]}
                   />
                   <Bar dataKey="ingresos" fill="#3b82f6" />
                 </RechartsBarChart>
@@ -635,7 +634,7 @@ export default function SuscripcionesPage() {
               <Building className="mx-auto h-12 w-12 text-muted-foreground/70 mb-4" />
               <h3 className="text-lg font-semibold mb-2">No se encontraron suscripciones</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || filtroEstado !== "todos" || filtroTipoNegocio !== "todos" 
+                {searchTerm || filtroEstado !== "todos" || filtroTipoNegocio !== "todos"
                   ? "Intenta cambiar los filtros de búsqueda"
                   : "Aún no hay suscripciones registradas en el sistema"
                 }
@@ -678,7 +677,7 @@ export default function SuscripcionesPage() {
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="space-y-1">
                           <Badge variant="outline" className="text-xs font-normal">
@@ -689,38 +688,37 @@ export default function SuscripcionesPage() {
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         {getEstadoBadge(suscripcion.estado)}
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm flex items-center gap-1 font-medium">
                             <CalendarIcon className="h-3 w-3" />
                             {formatearFecha(suscripcion.fechaVencimiento)}
                           </div>
-                          <div className={`text-xs font-medium px-2 py-1 rounded-full inline-block ${
-                            suscripcion.diasRestantes < 0 
+                          <div className={`text-xs font-medium px-2 py-1 rounded-full inline-block ${suscripcion.diasRestantes < 0
                               ? 'bg-destructive/15 text-red-800 dark:text-red-300' :
-                            suscripcion.diasRestantes <= 7 
-                              ? 'bg-destructive/15 text-red-800 dark:text-red-300' :
-                            suscripcion.diasRestantes <= 15 
-                              ? 'bg-amber-500/15 text-yellow-800' :
-                              'bg-emerald-500/15 text-green-800 dark:text-green-300'
-                          }`}>
+                              suscripcion.diasRestantes <= 7
+                                ? 'bg-destructive/15 text-red-800 dark:text-red-300' :
+                                suscripcion.diasRestantes <= 15
+                                  ? 'bg-amber-500/15 text-yellow-800' :
+                                  'bg-emerald-500/15 text-green-800 dark:text-green-300'
+                            }`}>
                             {suscripcion.diasRestantes < 0
                               ? `Vencida hace ${Math.abs(suscripcion.diasRestantes)} días`
                               : suscripcion.diasRestantes === 0
-                              ? 'Vence hoy'
-                              : suscripcion.diasRestantes === 1
-                              ? 'Vence mañana'
-                              : `${suscripcion.diasRestantes} días restantes`
+                                ? 'Vence hoy'
+                                : suscripcion.diasRestantes === 1
+                                  ? 'Vence mañana'
+                                  : `${suscripcion.diasRestantes} días restantes`
                             }
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell className="text-right">
                         <div className="space-y-1">
                           <div className="font-semibold text-green-600 dark:text-green-400 text-base">
@@ -731,7 +729,7 @@ export default function SuscripcionesPage() {
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell className="text-center">
                         <Button
                           variant="outline"
@@ -772,7 +770,7 @@ export default function SuscripcionesPage() {
                     {estadisticas.cantidad} activas
                   </Badge>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Ingresos totales:</span>
@@ -827,11 +825,10 @@ export default function SuscripcionesPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Días restantes:</p>
-                  <p className={`font-medium ${
-                    selectedSuscripcion && selectedSuscripcion.diasRestantes < 0 ? 'text-red-600 dark:text-red-400' :
-                    selectedSuscripcion && selectedSuscripcion.diasRestantes <= 15 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
-                  }`}>
-                    {selectedSuscripcion && selectedSuscripcion.diasRestantes < 0 
+                  <p className={`font-medium ${selectedSuscripcion && selectedSuscripcion.diasRestantes < 0 ? 'text-red-600 dark:text-red-400' :
+                      selectedSuscripcion && selectedSuscripcion.diasRestantes <= 15 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
+                    }`}>
+                    {selectedSuscripcion && selectedSuscripcion.diasRestantes < 0
                       ? `${Math.abs(selectedSuscripcion.diasRestantes)} días vencida`
                       : `${selectedSuscripcion?.diasRestantes || 0} días`
                     }
@@ -850,7 +847,7 @@ export default function SuscripcionesPage() {
                   Selecciona el tiempo de extensión de la suscripción
                 </p>
               </div>
-              
+
               <Select
                 value={mesesRenovacion.toString()}
                 onValueChange={(value) => setMesesRenovacion(Number.parseInt(value))}
@@ -865,7 +862,7 @@ export default function SuscripcionesPage() {
                   <SelectItem value="12">12 meses</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <div className="text-xs text-muted-foreground bg-blue-500/10 p-3 rounded border border-blue-500/30">
                 <p className="font-medium text-blue-900 mb-1">Información importante:</p>
                 <ul className="space-y-1 text-blue-800 dark:text-blue-300">
@@ -896,8 +893,8 @@ export default function SuscripcionesPage() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setRenovarDialogOpen(false);
                 setSelectedSuscripcion(null);
@@ -908,8 +905,8 @@ export default function SuscripcionesPage() {
             >
               Cancelar
             </Button>
-            <Button 
-              onClick={renovarSuscripcion} 
+            <Button
+              onClick={renovarSuscripcion}
               className="bg-blue-600 hover:bg-blue-700 flex-1"
               disabled={isRenovando}
             >

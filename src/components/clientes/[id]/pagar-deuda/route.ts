@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/db";
-import { EstadoPagoFiado } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
 interface PagoDistribucion {
@@ -89,7 +88,7 @@ export async function POST(
 
     // Calcular deuda total
     const deudaTotal = ventasFiadas.reduce(
-      (sum, venta) => sum + Number(venta.saldoPendiente || 0),
+      (sum: number, venta: any) => sum + Number(venta.saldoPendiente || 0),
       0
     );
 
@@ -109,7 +108,7 @@ export async function POST(
     const ventasActualizadas: string[] = [];
 
     // Usar transacción para garantizar atomicidad
-    const resultado = await db.$transaction(async (prisma) => {
+    const resultado = await db.$transaction(async (prisma: any) => {
       for (const venta of ventasFiadas) {
         if (montoRestante <= 0) break;
 
@@ -119,7 +118,7 @@ export async function POST(
         const nuevoMontoPagado = Number(venta.montoPagado || 0) + montoAplicado;
 
         // Determinar nuevo estado de pago
-        let nuevoEstadoPago: EstadoPagoFiado;
+        let nuevoEstadoPago: string;
         if (nuevoSaldo <= 0) {
           nuevoEstadoPago = "PAGADO";
         } else if (nuevoMontoPagado > 0) {

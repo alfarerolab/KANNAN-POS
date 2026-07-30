@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     const fechaInicio = searchParams.get("fechaInicio");
     const fechaFin = searchParams.get("fechaFin");
     const productoId = searchParams.get("productoId");
-    const pagina = parseInt(searchParams.get("pagina") || "1");
-    const limite = parseInt(searchParams.get("limite") || "50");
+    const pagina = Math.max(1, parseInt(searchParams.get("pagina") || "1") || 1);
+    const limite = Math.min(100, Math.max(1, parseInt(searchParams.get("limite") || "50") || 50));
     const offset = (pagina - 1) * limite;
 
     // Construir filtros
@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
     // Filtros de fecha
     if (fechaInicio || fechaFin) {
       whereClause.fechaMovimiento = {};
-      
+
       if (fechaInicio) {
         whereClause.fechaMovimiento.gte = new Date(fechaInicio + "T00:00:00.000Z");
       }
-      
+
       if (fechaFin) {
         whereClause.fechaMovimiento.lte = new Date(fechaFin + "T23:59:59.999Z");
       }
@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
       usuarioId: mov.usuarioId,
       cantidad: mov.cantidad,
       tipo: mov.tipo,
-      stockPrevio: mov.stockPrevio, 
-      stockNuevo: mov.stockNuevo, 
+      stockPrevio: mov.stockPrevio,
+      stockNuevo: mov.stockNuevo,
       motivo: mov.motivo,
       producto: {
         id: mov.producto.id,
@@ -187,10 +187,10 @@ export async function POST(request: NextRequest) {
 
     // Obtener stock actual como número
     const stockActualNumero = producto.enStock.toNumber();
-    
+
     // Calcular nuevo stock
     let nuevoStockNumero: number;
-    
+
     if (tipo === "ENTRADA") {
       nuevoStockNumero = stockActualNumero + cantidadNumerica;
     } else if (tipo === "SALIDA") {
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
       // Actualizar stock del producto
       const productoActualizado = await tx.producto.update({
         where: { id: productoId },
-        data: { 
+        data: {
           enStock: nuevoStock,
           updatedAt: new Date()
         }

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { es } from "date-fns/locale";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
   Calendar,
   Users,
   Package,
@@ -20,17 +20,17 @@ import {
   Save,
   X
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -93,14 +93,14 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
   const [cargando, setCargando] = useState(true);
   const [periodo, setPeriodo] = useState('mes'); // 'semana', 'mes', 'trimestre', 'año'
   const [tipoComparacion, setTipoComparacion] = useState('periodo-anterior');
-  
+
   // Estados para los datos
   const [metricas, setMetricas] = useState<MetricaAvanzada[]>([]);
   const [tendenciaVentas, setTendenciaVentas] = useState<DatosComparacion[]>([]);
   const [rendimientoCategorias, setRendimientoCategorias] = useState<RendimientoCategoria[]>([]);
   const [distribucionVentas, setDistribucionVentas] = useState<any[]>([]);
   const [objetivos, setObjetivos] = useState<ObjetivoPersonalizado[]>([]);
-  
+
   // Estados para configuración de objetivos
   const [modalObjetivos, setModalObjetivos] = useState(false);
   const [editandoObjetivo, setEditandoObjetivo] = useState<ObjetivoPersonalizado | null>(null);
@@ -120,7 +120,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
     try {
       // Importar servicioReportes si no está disponible globalmente
       const { servicioReportes } = await import('@/lib/api-service');
-      
+
       const datos = await servicioReportes.obtenerReportesAvanzados({
         periodo: periodo
       });
@@ -130,11 +130,11 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
         ...metrica,
         icono: getIconoComponente(metrica.icono)
       })));
-      
+
       setTendenciaVentas(datos.tendenciaVentas);
       setRendimientoCategorias(datos.rendimientoCategorias);
       setDistribucionVentas(datos.distribucionVentas);
-      
+
       // Los objetivos vienen vacíos por primera vez
       const objetivosConProgreso = (datos.objetivos || []).map((objetivo: any) => ({
         ...objetivo,
@@ -143,19 +143,19 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
       setObjetivos(objetivosConProgreso);
 
     } catch (error) {
-        console.error('Error al cargar datos avanzados:', error);
-        // Inicializar estados vacíos en caso de error
-        setMetricas([]);
-        setTendenciaVentas([]);
-        setRendimientoCategorias([]);
-        setDistribucionVentas([]);
-        setObjetivos([]);
-      } finally {
+      console.error('Error al cargar datos avanzados:', error);
+      // Inicializar estados vacíos en caso de error
+      setMetricas([]);
+      setTendenciaVentas([]);
+      setRendimientoCategorias([]);
+      setDistribucionVentas([]);
+      setObjetivos([]);
+    } finally {
       setCargando(false);
     }
   };
 
-  
+
   const getIconoComponente = (nombreIcono: string) => {
     switch (nombreIcono) {
       case 'DollarSign': return <DollarSign className="h-5 w-5" />;
@@ -188,10 +188,10 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
   };
 
   const guardarObjetivo = () => {
-  if (!nuevoObjetivo.nombre || nuevoObjetivo.meta <= 0) return;
+    if (!nuevoObjetivo.nombre || nuevoObjetivo.meta <= 0) return;
 
-  const objetivo: ObjetivoPersonalizado = {
-    id: `objetivo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const objetivo: ObjetivoPersonalizado = {
+      id: `objetivo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       nombre: nuevoObjetivo.nombre,
       actual: 0, // Siempre empieza en 0
       meta: nuevoObjetivo.meta,
@@ -214,9 +214,9 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
 
     const progreso = calcularProgreso(editandoObjetivo.actual, editandoObjetivo.meta);
 
-    setObjetivos(prev => 
-      prev.map(obj => 
-        obj.id === editandoObjetivo.id 
+    setObjetivos(prev =>
+      prev.map(obj =>
+        obj.id === editandoObjetivo.id
           ? { ...editandoObjetivo, progreso }
           : obj
       )
@@ -258,7 +258,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
           <h2 className="text-2xl font-bold text-foreground">Reportes Avanzados</h2>
           <p className="text-muted-foreground">Análisis detallado del rendimiento empresarial</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Select value={periodo} onValueChange={setPeriodo}>
             <SelectTrigger className="w-40">
@@ -271,9 +271,9 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
               <SelectItem value="año">Último Año</SelectItem>
             </SelectContent>
           </Select>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             size="sm"
             onClick={cargarDatos}
             disabled={cargando}
@@ -288,7 +288,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
       {/* Métricas Principales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {metricas.map((metrica, index) => {
-          const crecimiento = metrica.valorAnterior 
+          const crecimiento = metrica.valorAnterior
             ? calcularCrecimiento(metrica.valor, metrica.valorAnterior)
             : null;
           const esCrecimientoPositivo = crecimiento ? crecimiento >= 0 : null;
@@ -300,7 +300,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {metrica.titulo}
                   </CardTitle>
-                  <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", 
+                  <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center",
                     metrica.color.includes('green') && "bg-emerald-500/15 text-green-600 dark:text-green-400",
                     metrica.color.includes('blue') && "bg-blue-500/15 text-blue-600 dark:text-blue-400",
                     metrica.color.includes('purple') && "bg-purple-500/15 text-purple-600 dark:text-purple-400",
@@ -315,7 +315,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                   <div className="text-2xl font-bold text-foreground">
                     {formatearValor(metrica.valor, metrica.formato)}
                   </div>
-                  
+
                   {metrica.valorAnterior && crecimiento !== null && (
                     <div className="flex items-center gap-2">
                       <div className={cn(
@@ -332,7 +332,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                       <span className="text-xs text-muted-foreground">vs período anterior</span>
                     </div>
                   )}
-                  
+
                   <p className="text-xs text-muted-foreground">
                     {metrica.descripcion}
                   </p>
@@ -369,18 +369,18 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                   <AreaChart data={tendenciaVentas}>
                     <defs>
                       <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorAnterior" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="fecha" />
                     <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value, name) => [formatCurrency(Number(value)), name]}
                       labelStyle={{ color: '#374151' }}
                     />
@@ -420,68 +420,68 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
 
         {/* Categorías */}
         {rendimientoCategorias.length > 0 && (
-        <TabsContent value="categorias" className="mt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Rendimiento por Categoría</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {rendimientoCategorias.map((categoria, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: categoria.color }}
-                        />
-                        <div>
-                          <p className="font-medium">{categoria.categoria}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {categoria.ventas} ventas
-                          </p>
+          <TabsContent value="categorias" className="mt-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Rendimiento por Categoría</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {rendimientoCategorias.map((categoria, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: categoria.color }}
+                          />
+                          <div>
+                            <p className="font-medium">{categoria.categoria}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {categoria.ventas} ventas
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">{formatCurrency(categoria.ingresos)}</p>
+                          <div className={cn(
+                            "text-sm font-medium flex items-center gap-1",
+                            categoria.crecimiento >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                          )}>
+                            {categoria.crecimiento >= 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {Math.abs(categoria.crecimiento).toFixed(1)}%
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">{formatCurrency(categoria.ingresos)}</p>
-                        <div className={cn(
-                          "text-sm font-medium flex items-center gap-1",
-                          categoria.crecimiento >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                        )}>
-                          {categoria.crecimiento >= 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(categoria.crecimiento).toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Ingresos por Categoría</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={rendimientoCategorias}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="categoria" />
-                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Bar dataKey="ingresos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ingresos por Categoría</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={rendimientoCategorias}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis dataKey="categoria" />
+                        <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                        <Bar dataKey="ingresos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         )}
 
         {/* Distribución */}
@@ -502,7 +502,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="valor"
-                        label={({ nombre, valor }) => `${nombre}: ${valor}%`}
+                        label={(props: any) => `${props.nombre}: ${props.valor}%`}
                       >
                         {distribucionVentas.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -512,13 +512,13 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                
+
                 <div className="space-y-4">
                   {distribucionVentas.map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
+                        <div
+                          className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="font-medium">{item.nombre}</span>
@@ -555,7 +555,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                   <div className="space-y-4 py-4">
                     <div>
                       <Label htmlFor="nombre">Nombre del Objetivo</Label>
-                      <Input 
+                      <Input
                         id="nombre"
                         value={nuevoObjetivo.nombre}
                         onChange={(e) => setNuevoObjetivo(prev => ({ ...prev, nombre: e.target.value }))}
@@ -564,7 +564,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                     </div>
                     <div>
                       <Label htmlFor="meta">Meta</Label>
-                      <Input 
+                      <Input
                         id="meta"
                         type="number"
                         value={nuevoObjetivo.meta}
@@ -587,7 +587,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                     </div>
                     <div>
                       <Label htmlFor="descripcion">Descripción (opcional)</Label>
-                      <Input 
+                      <Input
                         id="descripcion"
                         value={nuevoObjetivo.descripcion}
                         onChange={(e) => setNuevoObjetivo(prev => ({ ...prev, descripcion: e.target.value }))}
@@ -612,7 +612,7 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
             <div className="grid gap-4 md:grid-cols-2">
               {objetivos.map((objetivo) => {
                 const progresoSeguro = obtenerProgresoSeguro(objetivo.progreso);
-                
+
                 return (
                   <Card key={objetivo.id}>
                     <CardHeader className="pb-3">
@@ -622,8 +622,8 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                           <Badge variant={progresoSeguro >= 90 ? "default" : progresoSeguro >= 70 ? "secondary" : "destructive"}>
                             {progresoSeguro.toFixed(0)}%
                           </Badge>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => editarObjetivo(objetivo)}
                             className="h-8 w-8 p-0"
@@ -665,9 +665,9 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                               <Button size="sm" variant="outline" onClick={() => setEditandoObjetivo(null)}>
                                 <X className="h-3 w-3" />
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
+                              <Button
+                                size="sm"
+                                variant="destructive"
                                 onClick={() => eliminarObjetivo(objetivo.id)}
                               >
                                 Eliminar
@@ -688,30 +688,30 @@ export function ReportesAvanzados({ empresaId }: ReportesAvanzadosProps) {
                                 </span>
                               </span>
                             </div>
-                            
+
                             <div className="w-full bg-muted rounded-full h-2">
-                              <div 
+                              <div
                                 className={cn(
                                   "h-2 rounded-full transition-all duration-300",
                                   progresoSeguro >= 90 ? "bg-green-500" :
-                                  progresoSeguro >= 70 ? "bg-blue-500" :
-                                  "bg-orange-500"
+                                    progresoSeguro >= 70 ? "bg-blue-500" :
+                                      "bg-orange-500"
                                 )}
                                 style={{ width: `${Math.min(progresoSeguro, 100)}%` }}
                               />
                             </div>
-                            
+
                             {objetivo.descripcion && (
                               <p className="text-xs text-muted-foreground">
                                 {objetivo.descripcion}
                               </p>
                             )}
-                            
+
                             <div className="text-xs text-muted-foreground">
                               {progresoSeguro >= 100 ? "¡Objetivo completado!" :
-                               progresoSeguro >= 90 ? "Muy cerca del objetivo" :
-                               progresoSeguro >= 70 ? "En buen camino" :
-                               "Necesita atención"}
+                                progresoSeguro >= 90 ? "Muy cerca del objetivo" :
+                                  progresoSeguro >= 70 ? "En buen camino" :
+                                    "Necesita atención"}
                             </div>
                           </>
                         )}

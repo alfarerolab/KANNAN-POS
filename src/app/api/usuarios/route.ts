@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
     // Opciones de búsqueda y paginación
     const busqueda = searchParams.get("busqueda");
     const rol = searchParams.get("rol");
-    const pagina = parseInt(searchParams.get("pagina") || "1");
-    const limite = parseInt(searchParams.get("limite") || "20");
+    const pagina = Math.max(1, parseInt(searchParams.get("pagina") || "1") || 1);
+    const limite = Math.min(100, Math.max(1, parseInt(searchParams.get("limite") || "20") || 20));
     const omitir = (pagina - 1) * limite;
 
     // Construir la consulta
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       const nombreSanitizado = sanitizeInput(nombre);
 
       // Generar email placeholder único interno (no expuesto al usuario)
-      const placeholderEmail = `emp-${Date.now()}-${crypto.randomUUID().substring(0,8)}@nologin.interno`;
+      const placeholderEmail = `emp-${Date.now()}-${crypto.randomUUID().substring(0, 8)}@nologin.interno`;
       const placeholderPassword = crypto.randomUUID();
       const contrasenaHash = await hashPassword(placeholderPassword);
 
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
         ? "Usuario creado exitosamente con configuración de empresa"
         : "Usuario creado. Requiere configuración inicial"
     }, { status: 201 });
-    
+
   } catch (error) {
     console.error("Error al crear usuario:", error);
     return NextResponse.json(

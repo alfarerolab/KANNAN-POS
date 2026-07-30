@@ -97,12 +97,12 @@ export async function GET(
     // Calcular estadísticas de las variantes
     const estadisticas = {
       total: variantes.length,
-      activas: variantes.filter(v => v.activa).length,
-      inactivas: variantes.filter(v => !v.activa).length,
-      conStock: variantes.filter(v => v.enStock > 0).length,
-      sinStock: variantes.filter(v => v.enStock === 0).length,
-      stockTotal: variantes.reduce((sum, v) => sum + v.enStock, 0),
-      valorInventario: variantes.reduce((sum, v) => sum + (v.precio || 0) * v.enStock, 0)
+      activas: variantes.filter((v: any) => v.activa).length,
+      inactivas: variantes.filter((v: any) => !v.activa).length,
+      conStock: variantes.filter((v: any) => v.enStock > 0).length,
+      sinStock: variantes.filter((v: any) => v.enStock === 0).length,
+      stockTotal: variantes.reduce((sum: number, v: any) => sum + v.enStock, 0),
+      valorInventario: variantes.reduce((sum: number, v: any) => sum + (v.precio || 0) * v.enStock, 0)
     };
 
     return NextResponse.json({

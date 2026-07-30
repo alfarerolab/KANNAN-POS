@@ -32,15 +32,21 @@ export async function GET(request: NextRequest) {
 
     const whereClause: any = { empresaId };
 
-    // Filtros de fecha
-    if (fechaInicio || fechaFin) {
-      whereClause.createdAt = {};
-      if (fechaInicio) whereClause.createdAt.gte = new Date(fechaInicio);
-      if (fechaFin) {
-        const fechaFinDate = new Date(fechaFin);
-        fechaFinDate.setHours(23, 59, 59, 999);
-        whereClause.createdAt.lte = fechaFinDate;
-      }
+    // Filtros de fecha robustos
+    whereClause.createdAt = {};
+    if (fechaInicio) {
+      whereClause.createdAt.gte = new Date(fechaInicio);
+    } else {
+      // Valor por defecto: últimos 30 días si no hay fecha inicial
+      const treintaDiasAtras = new Date();
+      treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
+      whereClause.createdAt.gte = treintaDiasAtras;
+    }
+
+    if (fechaFin) {
+      const fechaFinDate = new Date(fechaFin);
+      fechaFinDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt.lte = fechaFinDate;
     }
 
     if (clienteId && clienteId !== "todos") whereClause.clienteId = clienteId;

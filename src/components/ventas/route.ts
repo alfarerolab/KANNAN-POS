@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth/auth";
 import { db } from "@/lib/db";
-import { EstadoPagoFiado } from "@prisma/client";
 
 // GET - Obtener todas las ventas de la empresa actual
 export async function GET(request: NextRequest) {
@@ -285,14 +284,14 @@ export async function POST(request: NextRequest) {
     const total = subtotal + impuestoNumerico - descuentoNumerico;
 
     // Crear la venta en una transacción
-    const nuevaVenta = await db.$transaction(async (prisma) => {
+    const nuevaVenta = await db.$transaction(async (prisma: any) => {
       // Determinar si es venta fiada
       const esVentaFiada = metodoPago === "FIADO";
 
       // Calcular campos de venta fiada
       let saldoPendiente: number | null = null;
       let montoPagadoVenta = 0;
-      let estadoPagoVenta: EstadoPagoFiado | undefined = undefined;
+      let estadoPagoVenta: string | undefined = undefined;
       let fechaVencimientoVenta: Date | null = null;
       let diasCreditoVenta: number | null = null;
 
@@ -302,13 +301,13 @@ export async function POST(request: NextRequest) {
         montoPagadoVenta = pagoInicial;
         saldoPendiente = total - pagoInicial;
 
-        // Determinar estado de pago - CORREGIDO: usar enum
+        // Determinar estado de pago - CORREGIDO: usar string en vez de enum inexistente
         if (saldoPendiente <= 0) {
-          estadoPagoVenta = EstadoPagoFiado.PAGADO;
+          estadoPagoVenta = "PAGADO";
         } else if (montoPagadoVenta > 0) {
-          estadoPagoVenta = EstadoPagoFiado.PAGO_PARCIAL;
+          estadoPagoVenta = "PAGO_PARCIAL";
         } else {
-          estadoPagoVenta = EstadoPagoFiado.PENDIENTE;
+          estadoPagoVenta = "PENDIENTE";
         }
 
         // Calcular fecha de vencimiento

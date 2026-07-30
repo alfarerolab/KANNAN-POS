@@ -1,0 +1,58 @@
+src/app/dashboard/superadmin/analytics/page.tsx(367,33): error TS2339: Property 'tipo' does not exist on type 'PieLabelRenderProps'.
+src/app/dashboard/superadmin/analytics/page.tsx(367,39): error TS2339: Property 'total' does not exist on type 'PieLabelRenderProps'.
+src/app/dashboard/superadmin/suscripciones/page.tsx(514,21): error TS2578: Unused '@ts-expect-error' directive.
+src/components/clientes/[id]/deuda-total/route.ts(64,8): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(64,13): error TS7006: Parameter 'venta' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(69,8): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(69,13): error TS7006: Parameter 'venta' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(74,8): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(74,13): error TS7006: Parameter 'venta' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(80,8): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/clientes/[id]/deuda-total/route.ts(100,33): error TS7006: Parameter 'venta' implicitly has an 'any' type.
+src/components/clientes/[id]/pagar-deuda/route.ts(6,10): error TS2305: Module '"@prisma/client"' has no exported member 'EstadoPagoFiado'.
+src/components/clientes/[id]/pagar-deuda/route.ts(92,8): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/clientes/[id]/pagar-deuda/route.ts(92,13): error TS7006: Parameter 'venta' implicitly has an 'any' type.
+src/components/clientes/[id]/pagar-deuda/route.ts(112,52): error TS7006: Parameter 'prisma' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(100,33): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(101,35): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(102,34): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(103,34): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(104,37): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(104,42): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(105,42): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/components/productos/[id]/variantes/route.ts(105,47): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/components/productos/route.ts(105,49): error TS7006: Parameter 'producto' implicitly has an 'any' type.
+src/components/productos/route.ts(140,38): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/productos/route.ts(155,50): error TS7006: Parameter 'producto' implicitly has an 'any' type.
+src/components/reportes/ReportesAvanzados.tsx(505,35): error TS2339: Property 'nombre' does not exist on type 'PieLabelRenderProps'.
+src/components/reportes/ReportesAvanzados.tsx(505,43): error TS2339: Property 'valor' does not exist on type 'PieLabelRenderProps'.
+src/components/restaurante/context/RestauranteContext.tsx(839,16): error TS2345: Argument of type '(prev: RestauranteMesa[]) => (RestauranteMesa | { estado: "OCUPADA"; pedidoAbierto: { items: (RestaurantePedidoItem | { ...; })[]; ... 19 more ...; mesas: { ...; }[]; }; ... 6 more ...; updatedAt: string; })[]' is not assignable to parameter of type 'SetStateAction<RestauranteMesa[]>'.
+  Type '(prev: RestauranteMesa[]) => (RestauranteMesa | { estado: "OCUPADA"; pedidoAbierto: { items: (RestaurantePedidoItem | { ...; })[]; ... 19 more ...; mesas: { ...; }[]; }; ... 6 more ...; updatedAt: string; })[]' is not assignable to type '(prevState: RestauranteMesa[]) => RestauranteMesa[]'.
+    Type '(RestauranteMesa | { estado: "OCUPADA"; pedidoAbierto: { items: (RestaurantePedidoItem | { id: string; pedidoId: string; productoId: string; ... 10 more ...; createdAt: string; })[]; ... 19 more ...; mesas: { ...; }[]; }; ... 6 more ...; updatedAt: string; })[]' is not assignable to type 'RestauranteMesa[]'.
+      Type 'RestauranteMesa | { estado: "OCUPADA"; pedidoAbierto: { items: (RestaurantePedidoItem | { id: string; pedidoId: string; productoId: string; ... 10 more ...; createdAt: string; })[]; ... 19 more ...; mesas: { ...; }[]; }; ... 6 more ...; updatedAt: string; }' is not assignable to type 'RestauranteMesa'.
+        Type '{ estado: "OCUPADA"; pedidoAbierto: { items: (RestaurantePedidoItem | { id: string; pedidoId: string; productoId: string; nombreProducto: string; cantidad: number; ... 8 more ...; createdAt: string; })[]; ... 19 more ...; mesas: Array<{ id: string; esPrincipal: boolean; mesa: RestauranteMesaResumen; }>; }; ... 6 mor...' is not assignable to type 'RestauranteMesa'.
+          The types of 'pedidoAbierto.items' are incompatible between these types.
+            Type '(RestaurantePedidoItem | { id: string; pedidoId: string; productoId: string; nombreProducto: string; cantidad: number; precioUnitario: number; subtotal: number; ... 6 more ...; createdAt: string; })[]' is not assignable to type 'RestaurantePedidoItem[]'.
+              Type 'RestaurantePedidoItem | { id: string; pedidoId: string; productoId: string; nombreProducto: string; cantidad: number; precioUnitario: number; subtotal: number; ... 6 more ...; createdAt: string; }' is not assignable to type 'RestaurantePedidoItem'.
+                Type '{ id: string; pedidoId: string; productoId: string; nombreProducto: string; cantidad: number; precioUnitario: number; subtotal: number; notas: string | null; estacion: pedidorestauranteitem_estacion; ... 4 more ...; createdAt: string; }' is missing the following properties from type 'RestaurantePedidoItem': fechaSolicitud, producto
+src/components/restaurante/context/RestauranteContext.tsx(1105,9): error TS2353: Object literal may only specify known properties, and 'propina' does not exist in type 'RestauranteFacturarPayload'.
+src/components/restaurante/views/MeseroView.tsx(726,9): error TS2451: Cannot redeclare block-scoped variable 'prevItemStatusRef'.
+src/components/restaurante/views/MeseroView.tsx(727,10): error TS2451: Cannot redeclare block-scoped variable 'notificaciones'.
+src/components/restaurante/views/MeseroView.tsx(727,26): error TS2451: Cannot redeclare block-scoped variable 'setNotificaciones'.
+src/components/restaurante/views/MeseroView.tsx(780,10): error TS2451: Cannot redeclare block-scoped variable 'notificaciones'.
+src/components/restaurante/views/MeseroView.tsx(780,26): error TS2451: Cannot redeclare block-scoped variable 'setNotificaciones'.
+src/components/restaurante/views/MeseroView.tsx(781,9): error TS2451: Cannot redeclare block-scoped variable 'prevItemStatusRef'.
+src/components/ui/reportes-avanzados.tsx(454,35): error TS2339: Property 'nombre' does not exist on type 'PieLabelRenderProps'.
+src/components/ui/reportes-avanzados.tsx(454,43): error TS2339: Property 'cantidad' does not exist on type 'PieLabelRenderProps'.
+src/components/ventas/AnalyticsTab.tsx(208,21): error TS2322: Type '(value: any, name: string) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: any, name: string) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'name' and 'name' are incompatible.
+      Type 'NameType | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/components/ventas/AnalyticsTab.tsx(332,23): error TS2322: Type '(value: number, name: string, props: any) => [string, any]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: number, name: string, props: any) => [string, any]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+src/components/ventas/route.ts(6,10): error TS2305: Module '"@prisma/client"' has no exported member 'EstadoPagoFiado'.
+src/components/ventas/route.ts(288,53): error TS7006: Parameter 'prisma' implicitly has an 'any' type.

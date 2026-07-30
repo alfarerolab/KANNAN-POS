@@ -777,8 +777,6 @@ export function MeseroView() {
   };
 
   const totalCarrito = carritoTemporal.reduce((acc, item) => acc + ((item.producto.precio || 0) * item.cantidad), 0);
-  const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
-  const prevItemStatusRef = useRef<Record<string, string>>({});
 
   // Volver a la pestaña de mesas solo si se deselecciona la mesa activa
   useEffect(() => {

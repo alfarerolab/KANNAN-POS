@@ -199,37 +199,37 @@ export interface RestauranteContextValue {
   setCuentaForm: (
     v:
       | {
-          nombreCuenta: string;
-          comensales: number;
-          clienteId: string;
-          notas: string;
-          tipoServicio: string;
-          costoEmpaque: number;
-          costoDomicilio: number;
-          direccionEnvio: string;
-          telefonoEnvio: string;
-        }
+        nombreCuenta: string;
+        comensales: number;
+        clienteId: string;
+        notas: string;
+        tipoServicio: string;
+        costoEmpaque: number;
+        costoDomicilio: number;
+        direccionEnvio: string;
+        telefonoEnvio: string;
+      }
       | ((prev: {
-          nombreCuenta: string;
-          comensales: number;
-          clienteId: string;
-          notas: string;
-          tipoServicio: string;
-          costoEmpaque: number;
-          costoDomicilio: number;
-          direccionEnvio: string;
-          telefonoEnvio: string;
-        }) => {
-          nombreCuenta: string;
-          comensales: number;
-          clienteId: string;
-          notas: string;
-          tipoServicio: string;
-          costoEmpaque: number;
-          costoDomicilio: number;
-          direccionEnvio: string;
-          telefonoEnvio: string;
-        })
+        nombreCuenta: string;
+        comensales: number;
+        clienteId: string;
+        notas: string;
+        tipoServicio: string;
+        costoEmpaque: number;
+        costoDomicilio: number;
+        direccionEnvio: string;
+        telefonoEnvio: string;
+      }) => {
+        nombreCuenta: string;
+        comensales: number;
+        clienteId: string;
+        notas: string;
+        tipoServicio: string;
+        costoEmpaque: number;
+        costoDomicilio: number;
+        direccionEnvio: string;
+        telefonoEnvio: string;
+      })
   ) => void;
   facturaForm: {
     metodoPago: MetodoPagoRestaurante;
@@ -862,7 +862,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
             fechaListo: null,
             fechaEntrega: null,
             createdAt: new Date().toISOString(),
-          };
+          } as unknown as RestaurantePedidoItem;
           const itemsActualizados = [...pedidoLocal.items, itemOptimista];
           const nuevoTotal = itemsActualizados.reduce((s, i) => s + i.subtotal, 0);
           return {
@@ -1103,7 +1103,7 @@ export function RestauranteProvider({ children, defaultView, modo = "restaurante
         clienteId: facturaForm.clienteId === "sin-cliente" ? undefined : facturaForm.clienteId,
         notas: notasFinales,
         propina: facturaForm.propina > 0 ? montoConPropina - montoBase : undefined,
-      });
+      } as any);
       setTicketData(
         construirTicketRestaurante({
           pedido: resultado.pedido,

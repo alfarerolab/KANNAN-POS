@@ -48,8 +48,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = Number.parseInt(searchParams.get("page") ?? "1");
-    const limit = Number.parseInt(searchParams.get("limit") ?? "10");
+    const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1") || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "10") || 10));
     const tipo = searchParams.get("tipo");
     const productoId = searchParams.get("productoId");
 

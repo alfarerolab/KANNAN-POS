@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     const estadoPago = searchParams.get("estadoPago"); // PENDIENTE, PAGO_PARCIAL, PAGADO, VENCIDO
 
     // Opciones de paginación
-    const pagina = parseInt(searchParams.get("pagina") || "1");
-    const limite = parseInt(searchParams.get("limite") || "20");
+    const pagina = Math.max(1, parseInt(searchParams.get("pagina") || "1") || 1);
+    const limite = Math.min(100, Math.max(1, parseInt(searchParams.get("limite") || "20") || 20));
     const omitir = (pagina - 1) * limite;
 
     // Construir la consulta
@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
       take: limite,
     });
 
-   
+
     const ventasFormateadas = ventas.map((venta: typeof ventas[number]) => ({
-  ...venta,
-  fechaCreacion: venta.createdAt,
-}));
+      ...venta,
+      fechaCreacion: venta.createdAt,
+    }));
 
     return NextResponse.json({
       datos: ventasFormateadas,
@@ -332,32 +332,32 @@ export async function POST(request: NextRequest) {
     const productosADescontar =
       idsADescontar.length > 0
         ? await db.producto.findMany({
-            where: {
-              id: { in: idsADescontar },
-              empresaId,
-            },
-            select: { id: true, enStock: true, nombre: true },
-          })
+          where: {
+            id: { in: idsADescontar },
+            empresaId,
+          },
+          select: { id: true, enStock: true, nombre: true },
+        })
         : [];
 
     let notasConsumo = "";
     if (consumosInternos && Array.isArray(consumosInternos)) {
       const consumosArray: string[] = [];
       const consumosMap = new Map<string, number>();
-      
+
       for (const c of consumosInternos) {
         if (c.productoId && c.cantidad > 0) {
           consumosMap.set(c.productoId, (consumosMap.get(c.productoId) ?? 0) + Number(c.cantidad));
         }
       }
-      
+
       for (const [pId, cant] of consumosMap.entries()) {
         const prod = productosADescontar.find((p: any) => p.id === pId);
         if (prod) {
           consumosArray.push(`${prod.nombre} (${cant})`);
         }
       }
-      
+
       if (consumosArray.length > 0) {
         notasConsumo = `\n[Consumos del servicio: ${consumosArray.join(", ")}]`;
       }

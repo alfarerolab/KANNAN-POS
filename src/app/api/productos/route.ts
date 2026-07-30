@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     const soloInventario = searchParams.get("inventario");
 
     // Opciones de paginación
-    const pagina = Number.parseInt(searchParams.get("pagina") || "1");
-    const limite = Number.parseInt(searchParams.get("limite") || "20");
+    const pagina = Math.max(1, Number.parseInt(searchParams.get("pagina") || "1") || 1);
+    const limite = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limite") || "20") || 20));
     const omitir = (pagina - 1) * limite;
 
     // Construir la consulta
@@ -130,9 +130,9 @@ export async function GET(request: NextRequest) {
         if (producto.esCombo && producto.componentes) {
           stock = calcularStockCombo(producto.componentes);
         }
-        
+
         const stockMinimo = Number(producto.stockMinimo);
-        
+
         // Determinar estado del stock
         let estado: "normal" | "bajo" | "agotado" = "normal";
         if (stock === 0) {
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Filtrar por stock bajo si se solicita
-      const productosFiltrados = stockBajo === "true" 
+      const productosFiltrados = stockBajo === "true"
         // @ts-expect-error Autofix Next15 o tipos implícitos
         ? productosInventario.filter(p => p.estado === "bajo" || p.estado === "agotado")
         : productosInventario;
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
       if (producto.esCombo && producto.componentes) {
         finalStock = calcularStockCombo(producto.componentes);
       }
-      
+
       return {
         ...producto,
         enStock: finalStock,
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
 
     const empresaId = session.user.empresaId;
     let body;
-    
+
     try {
       body = await request.json();
     } catch (error) {
@@ -246,11 +246,11 @@ export async function POST(request: NextRequest) {
       precioCosto,
       precioSugerido,
       tipoVenta,
-      
+
       // Campos de IVA - del formulario vienen tieneIva y tarifaIva
       tieneIva,
       tarifaIva,
-      
+
       // Precios por unidad de medida
       precioPorKilo,
       precioPorGramo,
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       factorConversion,
       requiereBalanza,
       pesoAproximado,
-      
+
       // Campos existentes
       codigoBarras,
       sku,
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
       activo,
       categoriaId,
       proveedorId,
-      
+
       // ✅ CAMPOS DE VENCIMIENTO AGREGADOS
       manejaVencimiento,
       fechasVencimiento,
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
     // Validar tipo de venta
     const tipoVentaValido = tipoVenta || "UNIDAD";
     const tiposVentaPermitidos = ["UNIDAD", "PESO", "METRO", "LITRO", "SERVICIO", "TIEMPO", "PRECIO_LIBRE"];
-    
+
     if (!tiposVentaPermitidos.includes(tipoVentaValido)) {
       return NextResponse.json(
         { mensaje: `Tipo de venta inválido. Debe ser uno de: ${tiposVentaPermitidos.join(", ")}` },
@@ -455,7 +455,7 @@ export async function POST(request: NextRequest) {
 
     if (tieneIva !== undefined && tieneIva !== null) {
       const tieneIvaBoolean = Boolean(tieneIva);
-      
+
       if (tieneIvaBoolean) {
         // Si tiene IVA, validar la tarifa
         if (tarifaIva !== undefined && tarifaIva !== null && tarifaIva !== "") {
@@ -484,7 +484,7 @@ export async function POST(request: NextRequest) {
     if (tipoVentaValido === "PESO") {
       // Ya validamos precioPorKilo arriba
       precioPorKiloNumerico = Number(precioPorKilo);
-      
+
       if (precioPorGramo !== undefined && precioPorGramo !== null && precioPorGramo !== "") {
         precioPorGramoNumerico = Number(precioPorGramo);
         if (isNaN(precioPorGramoNumerico) || precioPorGramoNumerico <= 0) {
@@ -692,7 +692,7 @@ export async function POST(request: NextRequest) {
       precioPorGramo: precioPorGramoNumerico,
       precioPorMetro: precioPorMetroNumerico,
       precioPorLitro: precioPorLitroNumerico,
-      
+
       // Configuración de unidades
       unidadBase: unidadBase && typeof unidadBase === 'string' && unidadBase.trim() !== "" ? unidadBase.trim() : null,
       unidadVenta: unidadVenta && typeof unidadVenta === 'string' && unidadVenta.trim() !== "" ? unidadVenta.trim() : null,
@@ -711,7 +711,7 @@ export async function POST(request: NextRequest) {
       empresaId,
       categoriaId: categoriaId && typeof categoriaId === 'string' && categoriaId.trim() !== "" ? categoriaId : null,
       proveedorId: proveedorId && typeof proveedorId === 'string' && proveedorId.trim() !== "" ? proveedorId : null,
-      
+
       // ✅ CAMPOS DE VENCIMIENTO
       manejaVencimiento: manejaVencimiento !== undefined ? Boolean(manejaVencimiento) : false,
       fechasVencimiento: fechasVencimientoValidadas,
@@ -790,9 +790,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
-        mensaje: "Error interno del servidor al crear el producto", 
-        detalles: error instanceof Error ? error.message : JSON.stringify(error) 
+      {
+        mensaje: "Error interno del servidor al crear el producto",
+        detalles: error instanceof Error ? error.message : JSON.stringify(error)
       },
       { status: 500 }
     );

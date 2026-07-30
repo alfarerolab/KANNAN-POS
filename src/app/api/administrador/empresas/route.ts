@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
     const estado = searchParams.get("estado"); // Filtro para activas/inactivas
 
     // Opciones de paginación
-    const page = Number.parseInt(searchParams.get("page") || "1");
-    const limit = Number.parseInt(searchParams.get("limit") || "20");
+    const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") || "20") || 20));
     const skip = (page - 1) * limit;
 
     // Construir la consulta
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
         if (!fechaVencimiento && planMeses) {
           fechaFinObj.setMonth(fechaFinObj.getMonth() + Number(planMeses));
         }
-        
+
         await tx.suscripcion.create({
           data: {
             empresaId: empresa.id,
