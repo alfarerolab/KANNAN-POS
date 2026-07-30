@@ -4,8 +4,8 @@ import { subscriptionMiddleware } from "@/lib/subscription-middleware";
 
 export async function middleware(request: NextRequest) {
   try {
-    // Si estás en Electron, no ejecutar lógica de middleware
-    if (process.env.IS_ELECTRON === "true") {
+    // Si estás en Electron y NO estamos en producción, omitir middleware
+    if (process.env.IS_ELECTRON === "true" && process.env.NODE_ENV !== "production") {
       return NextResponse.next();
     }
 
@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
 
     // Protección básica contra inyecciones SQL en parámetros URL
     const dangerousSqlPatterns = /SELECT\s+.*FROM|INSERT\s+INTO|UPDATE\s+.*SET|DELETE\s+FROM|UNION\s+SELECT|DROP\s+(TABLE|DATABASE)|EXEC(\s|\+)+(s|x)p\w+/gi;
-    
+
     let isSuspicious = false;
     for (const [key, value] of Array.from(searchParams.entries())) {
       if (dangerousSqlPatterns.test(value)) {
@@ -102,8 +102,7 @@ export async function middleware(request: NextRequest) {
 
     // Middleware de suscripciones (límites de plan, no estado activo/inactivo)
     const verificacionesDeshabilitadas =
-      process.env.NODE_ENV === 'development' ||
-      process.env.DISABLE_ACCOUNT_CHECKS === 'true';
+      process.env.NODE_ENV === 'development';
 
     if (!verificacionesDeshabilitadas) {
       const subscriptionResponse = await subscriptionMiddleware(request);
@@ -112,12 +111,12 @@ export async function middleware(request: NextRequest) {
 
     // Todo OK
     const response = NextResponse.next();
-    
+
     // Headers para datos de sesión en Edge
     response.headers.set('x-user-id', token.sub || '');
     response.headers.set('x-user-role', token.role || '');
     response.headers.set('x-empresa-id', token.empresaId || '');
-    
+
     // Headers de seguridad (OWASP)
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('X-Frame-Options', 'DENY');

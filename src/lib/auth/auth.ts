@@ -40,7 +40,8 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 8 * 60 * 60, // 8 horas
+    updateAge: 60 * 60, // Renovar token si tiene más de 1 hora de actividad
   },
 
   pages: {
@@ -67,13 +68,13 @@ export const authOptions: NextAuthOptions = {
             (req?.headers?.['x-real-ip'] as string) ||
             '127.0.0.1';
 
-          const ipCheck = checkRateLimit(LOGIN_RATE_LIMIT, clientIp);
+          const ipCheck = await checkRateLimit(LOGIN_RATE_LIMIT, clientIp);
           if (!ipCheck.allowed) {
-            log.warn(`Rate limit login IP: ${clientIp}`);
-            throw new Error('Demasiados intentos. Espera un momento antes de volver a intentar.');
+            throw new Error(`Demasiados intentos. Intenta de nuevo en ${Math.ceil(ipCheck.retryAfterMs / 1000)}s`);
           }
 
-          const emailCheck = checkRateLimit(LOGIN_EMAIL_RATE_LIMIT, credentials.email.toLowerCase());
+          // Rate limit por email
+          const emailCheck = await checkRateLimit(LOGIN_EMAIL_RATE_LIMIT, credentials.email.toLowerCase());
           if (!emailCheck.allowed) {
             log.warn(`Rate limit login email: ${credentials.email}`);
             throw new Error('Demasiados intentos para este correo. Intenta más tarde.');
@@ -167,7 +168,7 @@ export const authOptions: NextAuthOptions = {
           if (fechaVencimiento) {
             const diasRestantes = Math.ceil(
               (fechaVencimiento.getTime() - new Date().getTime()) /
-                (1000 * 60 * 60 * 24)
+              (1000 * 60 * 60 * 24)
             );
 
             if (diasRestantes <= 0) {
@@ -228,7 +229,7 @@ export const authOptions: NextAuthOptions = {
             if (fechaVencimiento) {
               const diasRestantes = Math.ceil(
                 (fechaVencimiento.getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24)
+                (1000 * 60 * 60 * 24)
               );
               token.sinSuscripcion = diasRestantes <= 0;
               token.suscripcionPorVencer = diasRestantes > 0 && diasRestantes <= 7;
@@ -278,7 +279,7 @@ export const authOptions: NextAuthOptions = {
                 if (fechaVencimiento) {
                   const diasRestantes = Math.ceil(
                     (fechaVencimiento.getTime() - now) /
-                      (1000 * 60 * 60 * 24)
+                    (1000 * 60 * 60 * 24)
                   );
                   token.sinSuscripcion = diasRestantes <= 0;
 

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     // Rate Limiting
     const clientIp = getClientIp(req);
-    const rlCheck = checkRateLimit(CONFIG_INICIAL_RATE_LIMIT, clientIp);
+    const rlCheck = await checkRateLimit(CONFIG_INICIAL_RATE_LIMIT, clientIp);
     if (!rlCheck.allowed) {
       return NextResponse.json(
         { error: 'Demasiados intentos. Espera un momento.' },

@@ -3,6 +3,7 @@
  * Rate limiting en memoria para proteger endpoints críticos.
  * En producción se recomienda usar Redis para entornos multi-instancia.
  */
+import Redis from 'ioredis';
 
 interface RateLimitEntry {
   count: number;
@@ -60,10 +61,61 @@ export interface RateLimitResult {
   retryAfterMs: number;
 }
 
+let redisClient: Redis | null = null;
+try {
+  if (process.env.REDIS_URL || process.env.NODE_ENV === 'production') {
+    redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+      maxRetriesPerRequest: 1,
+      retryStrategy(times) {
+        if (times > 3) return null;
+        return Math.min(times * 50, 2000);
+      }
+    });
+
+    redisClient.on('error', (err) => {
+      console.warn('Redis error, falling back to memory rate limiting.', err.message);
+      redisClient = null;
+    });
+  }
+} catch (e) {
+  console.warn('Failed to initialize Redis, falling back to memory.');
+}
+
 /**
  * Verifica si una clave (IP, email, etc.) tiene permitido hacer la petición.
  */
-export function checkRateLimit(config: RateLimitConfig, key: string): RateLimitResult {
+export async function checkRateLimit(config: RateLimitConfig, key: string): Promise<RateLimitResult> {
+  if (redisClient) {
+    try {
+      const redisKey = `rl:${config.name}:${key}`;
+      const cu = await redisClient.incr(redisKey);
+      if (cu === 1) {
+        await redisClient.pexpire(redisKey, config.windowMs);
+      }
+
+      const ptll = await redisClient.pttl(redisKey);
+      const remainingMs = Math.max(ptll, 0);
+
+      if (cu > config.limit) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetAt: Date.now() + remainingMs,
+          retryAfterMs: remainingMs,
+        };
+      }
+
+      return {
+        allowed: true,
+        remaining: config.limit - cu,
+        resetAt: Date.now() + remainingMs,
+        retryAfterMs: 0,
+      };
+    } catch (e) {
+      console.warn('Redis rate limit err, fallback a memoria', e);
+    }
+  }
+
   const store = getStore(config.name);
   const now = Date.now();
   const entry = store.get(key);

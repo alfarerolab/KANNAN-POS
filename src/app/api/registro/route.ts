@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     // ── Rate Limiting ────────────────────────────────────────────
     const clientIp = getClientIp(request);
-    const rlCheck = checkRateLimit(REGISTRO_RATE_LIMIT, clientIp);
+    const rlCheck = await checkRateLimit(REGISTRO_RATE_LIMIT, clientIp);
     if (!rlCheck.allowed) {
       return NextResponse.json(
         { mensaje: "Demasiados intentos de registro. Intenta más tarde." },
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Validar emails
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEmpresa) ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailUsuario)) {
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailUsuario)) {
       return NextResponse.json(
         { mensaje: "Los emails proporcionados no son válidos" },
         { status: 400 }
