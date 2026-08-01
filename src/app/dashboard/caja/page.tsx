@@ -286,7 +286,7 @@ export default function CajaPage() {
       if (periodoGastos === "personalizado" && fechaDesdeGastos && fechaHastaGastos) {
         const [y1, m1, d1] = fechaDesdeGastos.split("-").map(Number);
         desde = new Date(Date.UTC(y1, m1 - 1, d1, 0, 0, 0, 0));
-        
+
         const [y2, m2, d2] = fechaHastaGastos.split("-").map(Number);
         hasta = new Date(Date.UTC(y2, m2 - 1, d2, 23, 59, 59, 999));
       } else if (periodoGastos !== "personalizado") {
@@ -295,7 +295,7 @@ export default function CajaPage() {
         const m1 = rango.desde.getMonth();
         const d1 = rango.desde.getDate();
         desde = new Date(Date.UTC(y1, m1, d1, 0, 0, 0, 0));
-        
+
         const y2 = rango.hasta.getFullYear();
         const m2 = rango.hasta.getMonth();
         const d2 = rango.hasta.getDate();
@@ -489,7 +489,7 @@ export default function CajaPage() {
   const formatFechaLocal = (fechaStr: string | Date | null | undefined, incluirHora = false): string => {
     if (!fechaStr) return "N/A";
     const str = typeof fechaStr === "string" ? fechaStr : fechaStr.toISOString();
-    
+
     // Extract YYYY-MM-DD
     const datePart = str.substring(0, 10);
     const parts = datePart.split("-").map(Number);
@@ -497,7 +497,7 @@ export default function CajaPage() {
       return "N/A";
     }
     const [year, month, day] = parts;
-    
+
     if (!incluirHora || str.includes("T00:00:00")) {
       const date = new Date(year, month - 1, day);
       return format(date, "dd/MM/yyyy");
@@ -612,8 +612,8 @@ export default function CajaPage() {
                       size="sm"
                       onClick={() => seleccionarCaja(c.id)}
                       className={`rounded-full px-5 py-2 text-xs font-semibold transition-all shadow-sm ${isSelected
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20"
-                          : "hover:bg-muted"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 ring-2 ring-primary/20"
+                        : "hover:bg-muted"
                         }`}
                     >
                       <span className="mr-1.5">{isSelected ? "✅" : "💵"}</span>
@@ -845,8 +845,8 @@ export default function CajaPage() {
                     key={p}
                     onClick={() => setPeriodoCobros(p)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${periodoCobros === p
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                       }`}
                   >
                     {p === "anio" ? "Año" : p}
@@ -1097,8 +1097,8 @@ export default function CajaPage() {
                       key={p}
                       onClick={() => setPeriodoGastos(p)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all uppercase ${periodoGastos === p
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
                       {p === "anio" ? "Año" : p}
@@ -1545,6 +1545,18 @@ export default function CajaPage() {
                     <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Descuento:</span>
                       <span>-{formatMoneda(detalleMovimiento.descuento)}</span>
+                    </div>
+                  )}
+                  {parseFloat(detalleMovimiento.costoEmpaque || 0) > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Costo de Empaque:</span>
+                      <span>{formatMoneda(parseFloat(detalleMovimiento.costoEmpaque))}</span>
+                    </div>
+                  )}
+                  {parseFloat(detalleMovimiento.costoDomicilio || 0) > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Costo de Domicilio:</span>
+                      <span>{formatMoneda(parseFloat(detalleMovimiento.costoDomicilio))}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-base border-t pt-2 text-foreground">
