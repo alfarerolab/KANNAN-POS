@@ -788,6 +788,7 @@ export function MeseroView() {
         setAgregarModalOpen(false);
       } else {
         const pedido = await restauranteApi.abrirPedido({
+          mesaId: "",
           nombreCuenta: "Venta Rápida / Mostrador",
           comensales: 1,
         });
