@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, CheckCircle, Loader2, Receipt, UserIcon, Users, DollarSign, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { esProductoBebida } from "@/lib/utils";
 
 // Métodos de pago disponibles
 const METODOS_PAGO = [
@@ -47,6 +48,7 @@ interface CheckoutDialogProps {
   onOpenClientDialog: () => void;
   notas: string;
   onNotasChange: (notas: string) => void;
+  items?: any[];
   subtotal: number;
   total: number;
   totalItems: number;
@@ -66,6 +68,7 @@ export function CheckoutDialog({
   onOpenClientDialog,
   notas,
   onNotasChange,
+  items,
   subtotal,
   total,
   totalItems,
@@ -105,7 +108,17 @@ export function CheckoutDialog({
   const [direccionEnvio, setDireccionEnvio] = useState<string>("");
   const [telefonoEnvio, setTelefonoEnvio] = useState<string>("");
 
-  const totalCalculado = total + (tipoServicio !== "MESA" ? costoEmpaque : 0) + (tipoServicio === "DOMICILIO" ? costoDomicilio : 0);
+  // Recargo de empaque: $1,000 por cada unidad de comida/producto no-bebida
+  const recargoEmpaqueTotal = (tipoServicio !== "MESA" && items && Array.isArray(items))
+    ? items.reduce((sum, item) => {
+        if (esProductoBebida(item)) return sum;
+        const cant = Number(item.cantidad || 1);
+        return sum + (1000 * cant);
+      }, 0)
+    : 0;
+
+  const subtotalCalculado = subtotal + recargoEmpaqueTotal;
+  const totalCalculado = total + recargoEmpaqueTotal + (tipoServicio === "DOMICILIO" ? costoDomicilio : 0);
 
   // Calcular totales de pagos múltiples
   const totalPagado = pagos.reduce((sum, pago) => sum + pago.monto, 0);
@@ -829,7 +842,7 @@ export function CheckoutDialog({
               <div className="space-y-3">
                 <div className="flex justify-between text-sm sm:text-base text-accent-foreground/80">
                   <span>Subtotal Artículos ({totalItems}):</span>
-                  <span>{formatearMoneda(subtotal)}</span>
+                  <span>{formatearMoneda(subtotalCalculado)}</span>
                 </div>
                 {tipoServicio === "DOMICILIO" && costoDomicilio > 0 && (
                   <div className="flex justify-between text-sm font-semibold text-sky-700 dark:text-sky-400">

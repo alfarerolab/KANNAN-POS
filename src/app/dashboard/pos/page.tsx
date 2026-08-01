@@ -1113,6 +1113,7 @@ function PuntoDeVenta() {
           onOpenClientDialog={() => setClienteDialogOpen(true)}
           notas={notas}
           onNotasChange={setNotas}
+          items={items}
           subtotal={subtotal}
           total={total}
           totalItems={totalItems}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { servicioPOS } from '@/lib/api-service';
 import type { ItemCarrito } from "@/types";
+import { esProductoBebida } from '@/lib/utils';
 // Tipo para pagos múltiples
 export interface PagoDetalle {
   id: string;
@@ -276,14 +277,29 @@ export function useSaleProcessing({
         return null;
       }
 
-      const totalFinal = total + (datosEnvio?.costoEmpaque || 0) + (datosEnvio?.costoDomicilio || 0);
+      const esParaLlevarODomicilio = datosEnvio?.tipoServicio === "LLEVAR" || datosEnvio?.tipoServicio === "DOMICILIO";
+
+      const itemsFinales = itemsCarrito.map((item: any) => {
+        const esBebida = esProductoBebida(item);
+        const recargo = (esParaLlevarODomicilio && !esBebida) ? 1000 : 0;
+        const precioUnitario = Number(item.precio || 0) + recargo;
+        const cant = Number(item.cantidad || 1);
+        return {
+          ...item,
+          precio: precioUnitario,
+          subtotal: precioUnitario * cant
+        };
+      });
+
+      const subtotalAjustado = itemsFinales.reduce((sum: number, item: any) => sum + item.subtotal, 0);
+      const totalFinal = subtotalAjustado + (datosEnvio?.costoDomicilio || 0);
 
       // Preparar datos de venta
       let datosVenta: any = {
-        items: itemsCarrito,
+        items: itemsFinales,
         clienteId: clienteSeleccionado?.id,
         notas: notas || undefined,
-        subtotal,
+        subtotal: subtotalAjustado,
         impuesto: 0,
         descuento: 0,
         total: totalFinal,
@@ -338,8 +354,8 @@ export function useSaleProcessing({
           nombre: configuracion?.empresa?.nombre || "Mi Empresa",
         },
         cliente: clienteSeleccionado,
-        items: items,
-        subtotal,
+        items: itemsFinales,
+        subtotal: subtotalAjustado,
         impuesto: 0,
         total: totalFinal,
         costoEmpaque: datosEnvio?.costoEmpaque || 0,

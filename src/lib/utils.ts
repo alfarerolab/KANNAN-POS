@@ -15,6 +15,17 @@ export function formatCurrency(amount: number): string {
     currencyDisplay: "code",
   }).format(amount);
 }
+
+// Detectar si un producto o ítem es una bebida (exenta de recargo de empaque)
+export function esProductoBebida(itemOrProducto: any): boolean {
+  if (!itemOrProducto) return false;
+  const p = itemOrProducto.producto || itemOrProducto;
+  const nombreCat = p.categoria?.nombre || p.categoriaNombre || p.categoria || "";
+  const nombreProd = p.nombre || itemOrProducto.nombre || "";
+  const texto = `${nombreCat} ${nombreProd}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /(bar|bebida|coctel|cocktail|cerveza|vino|licor|refresco|gaseosa|jugo|agua|soda|redbull|monster|gatorade|cafe|te|smoothie|malteada|postobon|cocacola|coca cola|pepsi|sprite|fanta|hit|tropicana|hatsu)/i.test(texto);
+}
+
 // Formatear fecha
 export function formatDate(date: Date | string | null | undefined, formatString = "PPP"): string {
   if (!date) return "N/A";
