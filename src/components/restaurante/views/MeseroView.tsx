@@ -772,14 +772,13 @@ export function MeseroView() {
           pedidoId = pedido.id;
         }
 
-        const promesas = carritoTemporal.map((item) =>
-          restauranteApi.agregarItem(pedidoId!, {
+        for (const item of carritoTemporal) {
+          await restauranteApi.agregarItem(pedidoId!, {
             productoId: item.producto.id,
             cantidad: item.cantidad,
             estacion: "COCINA",
-          })
-        );
-        await Promise.all(promesas);
+          });
+        }
         await recargarOperativo(mesaSeleccionada?.id);
         toast({
           title: "Ítems agregados a la mesa",
@@ -793,14 +792,13 @@ export function MeseroView() {
           comensales: 1,
         });
 
-        const promesas = carritoTemporal.map((item) =>
-          restauranteApi.agregarItem(pedido.id, {
+        for (const item of carritoTemporal) {
+          await restauranteApi.agregarItem(pedido.id, {
             productoId: item.producto.id,
             cantidad: item.cantidad,
             estacion: "COCINA",
-          })
-        );
-        await Promise.all(promesas);
+          });
+        }
 
         await restauranteApi.actualizarPedido(pedido.id, {
           tipoServicio: "LLEVAR",
