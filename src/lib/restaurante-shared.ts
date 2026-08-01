@@ -130,9 +130,9 @@ export function construirTicketRestaurante(args: {
     cliente:
       cliente?.nombre || pedido.cliente?.nombre
         ? {
-            nombre: cliente?.nombre || pedido.cliente?.nombre || "Consumidor final",
-            telefono: cliente?.telefono || pedido.cliente?.telefono || undefined,
-          }
+          nombre: cliente?.nombre || pedido.cliente?.nombre || "Consumidor final",
+          telefono: cliente?.telefono || pedido.cliente?.telefono || undefined,
+        }
         : undefined,
     items: pedido.items.map((item) => ({
       id: item.id,
@@ -152,6 +152,11 @@ export function construirTicketRestaurante(args: {
     subtotal: venta.subtotal,
     impuesto: venta.impuesto,
     total: venta.total,
+    costoEmpaque: pedido.costoEmpaque,
+    costoDomicilio: pedido.costoDomicilio,
+    tipoServicio: pedido.tipoServicio,
+    direccionEnvio: pedido.direccionEnvio,
+    telefonoEnvio: pedido.telefonoEnvio,
     metodoPago: venta.metodoPago,
     terminal: {
       nombre: "Restaurante",
