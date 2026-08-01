@@ -40,21 +40,22 @@ export function useSaleProcessing({
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      // Calcular subtotal correcto según tipo de venta
+      const precioUnitarioBase = Number((item as any).precio ?? item.producto?.precio ?? 0);
       let subtotalItem: number;
 
       if (item.producto.tipoVenta === "PESO" && item.peso) {
-        const precioPorKilo = item.producto.precioPorKilo || 0;
+        const precioPorKilo = item.producto.precioPorKilo || precioUnitarioBase;
         subtotalItem = item.peso * precioPorKilo;
       } else if (item.precioLibre) {
         subtotalItem = item.precioLibre;
       } else {
-        subtotalItem = item.cantidad * item.producto.precio;
+        subtotalItem = item.cantidad * precioUnitarioBase;
       }
 
       const baseItem = {
         id: item.id,
         cantidad: item.cantidad,
+        precio: precioUnitarioBase,
         subtotal: subtotalItem,
         empleadoId: item.empleadoId,
         esCortesia: item.esCortesia
@@ -282,12 +283,19 @@ export function useSaleProcessing({
       const itemsFinales = itemsCarrito.map((item: any) => {
         const esBebida = esProductoBebida(item);
         const recargo = (esParaLlevarODomicilio && !esBebida) ? 1000 : 0;
-        const precioUnitario = Number(item.precio || 0) + recargo;
+        const precioBase = Number(item.precio ?? item.producto?.precio ?? 0);
+        const precioUnitario = precioBase + recargo;
         const cant = Number(item.cantidad || 1);
+        const subtotalCalc = precioUnitario * cant;
+
         return {
           ...item,
           precio: precioUnitario,
-          subtotal: precioUnitario * cant
+          subtotal: subtotalCalc,
+          producto: {
+            ...item.producto,
+            precio: precioUnitario
+          }
         };
       });
 

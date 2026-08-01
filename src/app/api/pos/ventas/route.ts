@@ -284,11 +284,16 @@ export async function POST(req: NextRequest) {
           }),
           items: {
             create: items.map(item => {
+              const precioItem = parseFloat(item.precio ?? item.producto?.precio ?? 0);
+              const subtotalItem = item.subtotal !== undefined && item.subtotal !== null 
+                ? parseFloat(item.subtotal) 
+                : (precioItem * parseFloat(item.cantidad));
+
               if (item.producto.esServicio) {
                 return {
                   cantidad: new Decimal(item.cantidad),
-                  precio: parseFloat(item.producto.precio),
-                  subtotal: item.subtotal,
+                  precio: precioItem,
+                  subtotal: subtotalItem,
                   servicioId: item.producto.servicioId || item.producto.id,
                   empleadoId: item.empleadoId || item.producto.empleadoId || null
                 };
@@ -296,8 +301,8 @@ export async function POST(req: NextRequest) {
                 // Para productos
                 const itemData: any = {
                   cantidad: new Decimal(item.cantidad),
-                  precio: parseFloat(item.producto.precio),
-                  subtotal: item.subtotal,
+                  precio: precioItem,
+                  subtotal: subtotalItem,
                   productoId: item.producto.id,
                   empleadoId: item.empleadoId || item.producto.empleadoId || null
                 };
