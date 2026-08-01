@@ -7,6 +7,7 @@ import {
   serializarMesaRestaurante,
   decimalANumero,
   serializarPedidoRestaurante,
+  pedidoRestauranteInclude,
 } from "@/lib/restaurante";
 
 export async function GET(req: NextRequest) {
@@ -31,15 +32,7 @@ export async function GET(req: NextRequest) {
         estado: "ABIERTO",
         mesas: { none: {} }
       },
-      include: {
-        cliente: true,
-        usuario: true,
-        items: {
-          include: { producto: true },
-          orderBy: { createdAt: "asc" }
-        },
-        mesas: { include: { mesa: true } }
-      }
+      include: pedidoRestauranteInclude
     });
 
     // We serialize existing mesas first

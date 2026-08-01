@@ -26,6 +26,7 @@ import {
   EstadoMesaRestaurante,
   EstacionPreparacionRestaurante,
 } from "@/lib/prisma-types";
+import { restauranteApi } from "@/lib/restaurante-api";
 
 import { useRestaurante } from "@/components/restaurante/context/RestauranteContext";
 import { useToast } from "@/hooks/use-toast";
@@ -160,7 +161,7 @@ function MapaMesasAgrupado() {
   }, []);
 
   return (
-    <div className="grid gap-2 sm:gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10">
+    <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2 2xl:grid-cols-3">
       {mesas.map((mesa) => {
         const seleccionada = mesa.id === mesaSeleccionada?.id;
         const min = mesa.pedidoAbierto ? getMinutos(mesa.pedidoAbierto.createdAt) : 0;
@@ -722,7 +723,7 @@ interface NotifItem {
 import { ShoppingCart, User, Monitor, Mic } from "lucide-react";
 
 export function MeseroView() {
-  const { mesas, mesaSeleccionada, setCrearMesaOpen } = useRestaurante();
+  const { mesas, mesaSeleccionada, setCrearMesaOpen, recargarOperativo } = useRestaurante();
   const prevItemStatusRef = useRef<Record<string, string>>({});
   const [notificaciones, setNotificaciones] = useState<NotifItem[]>([]);
   const [activeTab, setActiveTab] = useState("mesas");
@@ -761,16 +762,62 @@ export function MeseroView() {
     setProcesandoCarrito(true);
     try {
       if (modoVenta === "mesa") {
-        // Enviar a la mesa 1 a 1 (simulado rápido si se necesita endpoints masivos)
-        // Por ahora le pedimos que use el flujo normal si fallara, pero idealmente llamaría al API de item
-        toast({ title: "Esta función enviará los ítems a la mesa. Procesando...", description: "Cerrando modal." });
+        let pedidoId = mesaSeleccionada?.pedidoAbierto?.id;
+        if (!pedidoId) {
+          const pedido = await restauranteApi.abrirPedido({
+            mesaId: mesaSeleccionada!.id,
+            nombreCuenta: mesaSeleccionada!.nombre,
+            comensales: 1,
+          });
+          pedidoId = pedido.id;
+        }
+
+        const promesas = carritoTemporal.map((item) =>
+          restauranteApi.agregarItem(pedidoId!, {
+            productoId: item.producto.id,
+            cantidad: item.cantidad,
+            estacion: "COCINA",
+          })
+        );
+        await Promise.all(promesas);
+        await recargarOperativo(mesaSeleccionada?.id);
+        toast({
+          title: "Ítems agregados a la mesa",
+          description: "La orden fue enviada a preparación.",
+        });
         setAgregarModalOpen(false);
       } else {
-        // Enviar a caja o procesar venta
-        toast({ title: "Venta rápida procesada (mock)", description: "Esto despachará una venta inmediata." });
+        const pedido = await restauranteApi.abrirPedido({
+          nombreCuenta: "Venta Rápida / Mostrador",
+          comensales: 1,
+        });
+
+        const promesas = carritoTemporal.map((item) =>
+          restauranteApi.agregarItem(pedido.id, {
+            productoId: item.producto.id,
+            cantidad: item.cantidad,
+            estacion: "COCINA",
+          })
+        );
+        await Promise.all(promesas);
+
+        await restauranteApi.actualizarPedido(pedido.id, {
+          tipoServicio: "LLEVAR",
+        });
+
+        await recargarOperativo(null);
+        toast({
+          title: "Venta rápida generada",
+          description: "El ticket fue enviado a caja y su orden a preparación.",
+        });
         setAgregarModalOpen(false);
       }
-    } catch (e) {
+    } catch (e: any) {
+      toast({
+        title: "Error al procesar",
+        description: e?.message || "Algo salió mal",
+        variant: "destructive",
+      });
     } finally {
       setProcesandoCarrito(false);
     }
@@ -901,32 +948,35 @@ export function MeseroView() {
           </CardContent>
         </Card>
 
-        {/* Botones de acción rápida */}
-        <div className="grid grid-cols-2 gap-4 my-2">
-          <button
-            onClick={abrirVentaRapida}
-            className="flex items-center justify-start gap-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-left hover:bg-emerald-500/20 transition group">
-            <div className="bg-emerald-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><ShoppingCart className="text-emerald-700 dark:text-emerald-400 h-5 w-5" /></div>
-            <div>
-              <p className="font-bold text-emerald-800 dark:text-emerald-400 text-lg leading-tight">Venta Rápida</p>
-              <p className="text-emerald-700/70 dark:text-emerald-500 text-sm">Cobro inmediato en mostrador</p>
-            </div>
-          </button>
-          <button
-            onClick={abrirVentaMesa}
-            disabled={!mesaSeleccionada}
-            className="flex items-center justify-start gap-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-left hover:bg-blue-500/20 transition disabled:opacity-50 group">
-            <div className="bg-blue-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><Mic className="text-blue-700 dark:text-blue-400 h-5 w-5" /></div>
-            <div>
-              <p className="font-bold text-blue-800 dark:text-blue-400 text-lg leading-tight">Añadir a {mesaSeleccionada?.nombre || "Mesa"}</p>
-              <p className="text-blue-700/70 dark:text-blue-500 text-sm">Mesa seleccionada activa</p>
-            </div>
-          </button>
-        </div>
+        {/* Columna derecha: Acciones y Detalle */}
+        <div className="flex flex-col gap-6 w-full">
+          {/* Botones de acción rápida */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={abrirVentaRapida}
+              className="flex items-center justify-start gap-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-left hover:bg-emerald-500/20 transition group">
+              <div className="bg-emerald-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><ShoppingCart className="text-emerald-700 dark:text-emerald-400 h-5 w-5" /></div>
+              <div>
+                <p className="font-bold text-emerald-800 dark:text-emerald-400 text-lg leading-tight">Venta Rápida</p>
+                <p className="text-emerald-700/70 dark:text-emerald-500 text-sm">Cobro inmediato en mostrador</p>
+              </div>
+            </button>
+            <button
+              onClick={abrirVentaMesa}
+              disabled={!mesaSeleccionada}
+              className="flex items-center justify-start gap-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-left hover:bg-blue-500/20 transition disabled:opacity-50 group">
+              <div className="bg-blue-500/20 p-3 rounded-xl scale-95 group-hover:scale-100 transition"><Mic className="text-blue-700 dark:text-blue-400 h-5 w-5" /></div>
+              <div>
+                <p className="font-bold text-blue-800 dark:text-blue-400 text-lg leading-tight">Añadir a {mesaSeleccionada?.nombre || "Mesa"}</p>
+                <p className="text-blue-700/70 dark:text-blue-500 text-sm">Mesa seleccionada activa</p>
+              </div>
+            </button>
+          </div>
 
-        {/* Panel inferior: detalles */}
-        <div className="grid gap-6 items-start">
-          <PanelPedido />
+          {/* Panel inferior: detalles */}
+          <div className="w-full">
+            <PanelPedido />
+          </div>
         </div>
       </div>
 

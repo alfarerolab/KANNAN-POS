@@ -130,10 +130,10 @@ export function serializarPedidoRestaurante(
     updatedAt: pedido.updatedAt.toISOString(),
     cliente: pedido.cliente
       ? {
-          id: pedido.cliente.id,
-          nombre: pedido.cliente.nombre,
-          telefono: pedido.cliente.telefono,
-        }
+        id: pedido.cliente.id,
+        nombre: pedido.cliente.nombre,
+        telefono: pedido.cliente.telefono,
+      }
       : null,
     usuario: pedido.usuario,
     mesas: pedido.mesas.map((mesaPedido) => ({
@@ -219,6 +219,11 @@ export async function recalcularTotalesPedido(
   db: DbLike,
   pedidoId: string
 ) {
+  const pedido = await db.pedidoRestaurante.findUnique({
+    where: { id: pedidoId },
+    select: { costoEmpaque: true, costoDomicilio: true }
+  });
+
   const items = await db.pedidoRestauranteItem.findMany({
     where: { pedidoId },
     select: { subtotal: true },
@@ -229,12 +234,16 @@ export async function recalcularTotalesPedido(
     new Decimal(0)
   );
 
+  const costoEmpaque = pedido?.costoEmpaque ?? new Decimal(0);
+  const costoDomicilio = pedido?.costoDomicilio ?? new Decimal(0);
+  const total = subtotal.plus(costoEmpaque).plus(costoDomicilio);
+
   return db.pedidoRestaurante.update({
     where: { id: pedidoId },
     data: {
       subtotal,
       impuesto: new Decimal(0),
-      total: subtotal,
+      total,
     },
     include: pedidoRestauranteInclude,
   });
