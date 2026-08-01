@@ -19,6 +19,7 @@ import { DialogoRegistrarPago } from "@/components/ventas/DialogoRegistrarPago";
 import { DialogoEditarVenta } from "@/components/ventas/DialogoEditarVenta";
 import { HistorialAuditoriaVenta } from "@/components/ventas/HistorialAuditoriaVenta";
 import { EstadoPagoFiado } from "@/types/ventas-fiadas";
+import { TicketPrinter } from "@/components/ui/ticket-printer";
 
 const METODOS_PAGO: { [key: string]: { nombre: string; icon: string } } = {
   "EFECTIVO": { nombre: "Efectivo", icon: "💵" },
@@ -104,6 +105,7 @@ export default function DetalleVentaPage() {
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [dialogoPagoAbierto, setDialogoPagoAbierto] = useState(false);
   const [dialogoEditarAbierto, setDialogoEditarAbierto] = useState(false);
+  const [ticketPrinterOpen, setTicketPrinterOpen] = useState(false);
   const [auditoriaRefreshKey, setAuditoriaRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -660,14 +662,14 @@ export default function DetalleVentaPage() {
                   Editar Factura (Método de Pago / Empleados)
                 </Button>
               )}
-              <Button variant="outline" className="w-full text-xs sm:text-sm" onClick={() => window.print()}>
+              <Button variant="outline" className="w-full text-xs sm:text-sm" onClick={() => setTicketPrinterOpen(true)}>
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir Factura
               </Button>
               <Button
                 variant="outline"
                 className="w-full text-xs sm:text-sm"
-                onClick={() => toast.info("Funcionalidad de descarga en desarrollo")}
+                onClick={() => setTicketPrinterOpen(true)}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Descargar PDF
@@ -741,6 +743,26 @@ export default function DetalleVentaPage() {
           setAuditoriaRefreshKey((k) => k + 1);
         }}
       />
+
+      {venta && (
+        <TicketPrinter
+          ticketData={{
+            venta: venta,
+            empresa: { nombre: "Mi Empresa" },
+            cliente: venta.cliente,
+            items: venta.items || [],
+            subtotal: venta.subtotal || 0,
+            impuesto: venta.impuesto || 0,
+            total: venta.total || 0,
+            metodoPago: venta.metodoPago || "EFECTIVO",
+            pagosMultiples: venta.pagos,
+            usuario: venta.usuario
+          }}
+          open={ticketPrinterOpen}
+          onOpenChange={setTicketPrinterOpen}
+          onPrintComplete={() => setTicketPrinterOpen(false)}
+        />
+      )}
     </div>
   );
 }

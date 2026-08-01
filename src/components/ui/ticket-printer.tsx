@@ -378,17 +378,18 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
           printWindow.document.close();
         } else {
           // Fallback: descargar PDF
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          const pdfWidth = formatoPapel === "58mm" ? 58 : 80;
+          const pdfHeight = Math.max((canvas.height * pdfWidth) / canvas.width, 100);
+
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: formatoPapel === "58mm" ? [58, 200] : [80, 200]
+            format: [pdfWidth, pdfHeight]
           });
 
-          const pdfWidth = formatoPapel === "58mm" ? 58 : 80;
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
           pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          pdf.save(`ticket-${ticketData.venta.id}.pdf`);
+          pdf.save(`ticket-${ticketData.venta?.id || 'venta'}.pdf`);
           
           toast({
             title: "📥 PDF descargado",
@@ -440,18 +441,18 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
         imageTimeout: 0
       });
 
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdfWidth = formatoPapel === "58mm" ? 58 : 80;
+      const pdfHeight = Math.max((canvas.height * pdfWidth) / canvas.width, 100);
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: formatoPapel === "58mm" ? [58, 200] : [80, 200]
+        format: [pdfWidth, pdfHeight]
       });
 
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdfWidth = formatoPapel === "58mm" ? 58 : 80;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`ticket-${ticketData.venta.id}.pdf`);
+      pdf.save(`ticket-${ticketData.venta?.id || 'venta'}.pdf`);
 
       toast({
         title: "📥 PDF descargado",
@@ -478,7 +479,7 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
   if (autoImprimir) {
     if (!open) return null;
     return (
-      <div className="fixed -top-[9999px] -left-[9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+      <div style={{ position: "absolute", left: "-9999px", top: 0, zIndex: -100, pointerEvents: "none" }}>
         <div className="flex justify-center bg-card dark:bg-background p-4">
           <Ticket
             ref={ticketRef}
@@ -490,11 +491,11 @@ export function TicketPrinter({ ticketData, open, onOpenChange, onPrintComplete,
             total={ticketData.total}
             metodoPago={ticketData.metodoPago}
             nombreCliente={ticketData.cliente?.nombre}
-            empresaNombre={empresaData?.nombre || ticketData.empresa.nombre}
-            empresaDireccion={empresaData?.direccion || ticketData.empresa.direccion}
-            empresaTelefono={empresaData?.telefono || ticketData.empresa.telefono}
-            empresaEmail={empresaData?.email || ticketData.empresa.email}
-            empresaNIT={empresaData?.nit || ticketData.empresa.nit}
+            empresaNombre={empresaData?.nombre || ticketData.empresa?.nombre}
+            empresaDireccion={empresaData?.direccion || ticketData.empresa?.direccion}
+            empresaTelefono={empresaData?.telefono || ticketData.empresa?.telefono}
+            empresaEmail={empresaData?.email || ticketData.empresa?.email}
+            empresaNIT={empresaData?.nit || ticketData.empresa?.nit}
             empresaLogo={incluirLogo ? logoParaTicket : null}
             mostrarLogo={incluirLogo && tieneLogoDisponible}
             formatoPapel={formatoPapel}

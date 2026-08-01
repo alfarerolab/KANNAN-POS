@@ -80,12 +80,14 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
     const esPagoMultiple = pagosMultiples && pagosMultiples.length > 1;
 
     // Filtrar productos de cortesía (no se muestran en el ticket impreso)
-    const itemsImprimibles = items.filter(item => {
-      const p = item.producto;
-      return (
-        p.tipoVenta !== 'CORTESIA' &&
-        Number(p.precio) > 0
-      );
+    const itemsImprimibles = (items || []).filter(item => {
+      if (!item) return false;
+      const p = item.producto || item;
+      const tipoVenta = p.tipoVenta || (item as any).tipoVenta;
+      const precio = Number(p.precio ?? (item as any).precio ?? 0);
+      const subtotal = Number(item.subtotal ?? 0);
+      const esCortesia = item.esCortesia || tipoVenta === 'CORTESIA';
+      return !esCortesia && (precio > 0 || subtotal > 0 || items.length === 1);
     });
 
     const formatearFecha = (date: Date) => {
@@ -103,13 +105,13 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
       const ivasPorTarifa: { [key: string]: number } = {};
 
       itemsImprimibles.forEach(item => {
-        const producto = item.producto;
+        const producto = item.producto || item;
         const tarifaIva = Number(producto.tarifaIva || 0);
 
         if (!producto.esExentoIva && tarifaIva > 0) {
-          const calculoIva = calcularIVAProducto(item.subtotal, {
-            id: producto.id,
-            precio: Number(producto.precio),
+          const calculoIva = calcularIVAProducto(item.subtotal || (Number(producto.precio || 0) * item.cantidad), {
+            id: producto.id || item.id,
+            precio: Number(producto.precio || (item as any).precio || 0),
             tieneIva: !producto.esExentoIva,
             tarifaIva: tarifaIva,
             incluyeIva: producto.incluyeIva || false,
@@ -382,10 +384,12 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
 
           {/* Items */}
           {itemsImprimibles.map((item, index) => {
-            const producto = item.producto;
-            const tarifaIva = Number(producto.tarifaIva || 0);
-            const tieneIva = !producto.esExentoIva && tarifaIva > 0;
-            const precioUnitario = Number(producto.precio);
+            const producto = item.producto || item;
+            const nombre = producto?.nombre || (item as any)?.nombre || (item as any)?.servicio?.nombre || "Producto";
+            const tarifaIva = Number(producto?.tarifaIva || 0);
+            const tieneIva = !producto?.esExentoIva && tarifaIva > 0;
+            const precioUnitario = Number(producto?.precio ?? (item as any)?.precio ?? 0);
+            const subtotalItem = Number(item.subtotal ?? (precioUnitario * item.cantidad));
 
             return (
               <div key={index} style={{ marginBottom: "8px" }}>
@@ -403,13 +407,13 @@ export const Ticket = forwardRef<HTMLDivElement, PropiedadesTicket>(
                     fontWeight: "900",
                     paddingRight: "2px"
                   }}>
-                    {producto.nombre}
+                    {nombre}
                   </div>
                   <div style={{ width: "20%", textAlign: "center", whiteSpace: "nowrap" }}>
                     {item.cantidad}
                   </div>
                   <div style={{ width: is58 ? "38%" : "30%", textAlign: "right", fontWeight: "900", whiteSpace: "nowrap", letterSpacing: "-0.5px" }}>
-                    {formatCurrency(item.subtotal)}
+                    {formatCurrency(subtotalItem)}
                   </div>
                 </div>
 

@@ -62,6 +62,7 @@ import {
 import { toast } from "sonner";
 import { EstadoPagoFiado } from "@/types/ventas-fiadas";
 import { DialogoPagarDeudaTotal } from "./DialogoPagarDeudaTotal";
+import { TicketPrinter } from "@/components/ui/ticket-printer";
 
 interface Venta {
   id: string;
@@ -128,6 +129,8 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
   const [clientesConDeuda, setClientesConDeuda] = useState<ClienteConDeuda[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<{ id: string; nombre: string; email?: string } | null>(null);
   const [dialogoPagoDeudaAbierto, setDialogoPagoDeudaAbierto] = useState(false);
+  const [ticketPrinterOpen, setTicketPrinterOpen] = useState(false);
+  const [ticketDataState, setTicketDataState] = useState<any>(null);
 
   useEffect(() => {
     cargarVentas();
@@ -301,7 +304,35 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
 
   const handleVerDetalle    = (id: string) => router.push(`/dashboard/ventas/${id}`);
   const handleRegistrarPago = (id: string) => router.push(`/dashboard/ventas/${id}#pagos`);
-  const handleImprimirTicket = (id: string) => window.open(`/dashboard/pos/ticket?ventaId=${id}`, "_blank");
+  const handleImprimirTicket = async (id: string) => {
+    try {
+      toast.info("Cargando ticket...");
+      const res = await fetch(`/api/ventas/${id}`);
+      if (!res.ok) throw new Error("Error al obtener la venta");
+      const v = await res.json();
+      
+      const datosTicket: any = {
+        venta: v,
+        empresa: {
+          nombre: "Mi Empresa",
+        },
+        cliente: v.cliente,
+        items: v.items || [],
+        subtotal: v.subtotal || 0,
+        impuesto: v.impuesto || 0,
+        total: v.total || 0,
+        metodoPago: v.metodoPago || "EFECTIVO",
+        pagosMultiples: v.pagos,
+        usuario: v.usuario
+      };
+      
+      setTicketDataState(datosTicket);
+      setTicketPrinterOpen(true);
+    } catch (error) {
+      console.error("Error al cargar ticket:", error);
+      toast.error("No se pudo cargar el ticket para imprimir");
+    }
+  };
 
   const handleExportar = async () => {
     try {
@@ -1025,6 +1056,15 @@ export function ListaVentasTab({ formatearMoneda }: ListaVentasTabProps) {
         cliente={clienteSeleccionado}
         onPagoRegistrado={handlePagoDeudaRegistrado}
       />
+
+      {ticketDataState && (
+        <TicketPrinter
+          ticketData={ticketDataState}
+          open={ticketPrinterOpen}
+          onOpenChange={setTicketPrinterOpen}
+          onPrintComplete={() => setTicketPrinterOpen(false)}
+        />
+      )}
     </div>
   );
 }
