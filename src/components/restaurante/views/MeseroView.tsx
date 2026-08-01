@@ -451,43 +451,40 @@ function PanelPedido() {
 
             {cuentaForm.tipoServicio === "DOMICILIO" && (
               <div className="space-y-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-3">
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
-                        🛵 Costo Envío / Domicilio ($)
-                      </Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={500}
-                        value={cuentaForm.costoDomicilio}
-                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoDomicilio: Number(e.target.value || 0) }))}
-                        disabled={!pedidoActivo}
-                        className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Dirección de Entrega</Label>
-                      <Input
-                        value={cuentaForm.direccionEnvio}
-                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, direccionEnvio: e.target.value }))}
-                        placeholder="Calle / Carrera #..."
-                        disabled={!pedidoActivo}
-                        className="h-9 bg-background text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Teléfono Contacto</Label>
-                      <Input
-                        value={cuentaForm.telefonoEnvio}
-                        onChange={(e) => setCuentaForm((prev) => ({ ...prev, telefonoEnvio: e.target.value }))}
-                        placeholder="300 000 0000"
-                        disabled={!pedidoActivo}
-                        className="h-9 bg-background text-xs"
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                    🛵 Costo Envío / Domicilio ($)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={cuentaForm.costoDomicilio}
+                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoDomicilio: Number(e.target.value || 0) }))}
+                    disabled={!pedidoActivo}
+                    className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Dirección de Entrega</Label>
+                  <Input
+                    value={cuentaForm.direccionEnvio}
+                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, direccionEnvio: e.target.value }))}
+                    placeholder="Calle / Carrera #..."
+                    disabled={!pedidoActivo}
+                    className="h-9 bg-background text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Teléfono Contacto</Label>
+                  <Input
+                    value={cuentaForm.telefonoEnvio}
+                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, telefonoEnvio: e.target.value }))}
+                    placeholder="300 000 0000"
+                    disabled={!pedidoActivo}
+                    className="h-9 bg-background text-xs"
+                  />
+                </div>
               </div>
             )}
 
