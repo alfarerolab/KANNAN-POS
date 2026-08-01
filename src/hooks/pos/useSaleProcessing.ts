@@ -41,7 +41,7 @@ export function useSaleProcessing({
 
       // Calcular subtotal correcto según tipo de venta
       let subtotalItem: number;
-      
+
       if (item.producto.tipoVenta === "PESO" && item.peso) {
         const precioPorKilo = item.producto.precioPorKilo || 0;
         subtotalItem = item.peso * precioPorKilo;
@@ -190,10 +190,10 @@ export function useSaleProcessing({
         }
       } catch (error) {
         console.error(`Error al actualizar cita ${citaId}:`, error);
-        return { 
-          success: false, 
-          citaId, 
-          error: error instanceof Error ? error.message : String(error) 
+        return {
+          success: false,
+          citaId,
+          error: error instanceof Error ? error.message : String(error)
         };
       }
     });
@@ -240,7 +240,7 @@ export function useSaleProcessing({
 
     // Si hay pagos múltiples, validar
     const esPagoMultiple = pagosMultiples && pagosMultiples.length > 1;
-    
+
     if (esPagoMultiple && pagosMultiples!.length === 0) {
       toast({
         title: "Sin pagos",
@@ -303,10 +303,10 @@ export function useSaleProcessing({
       if (esPagoMultiple) {
         // Usar el primer método de pago como principal (requerido por el backend)
         datosVenta.metodoPago = pagosMultiples![0].metodoPago;
-        
+
         // Flag para que el backend cree los registros de PagoVenta
         datosVenta.pagosMultiples = true;
-        
+
         // Agregar los pagos como array
         datosVenta.pagos = pagosMultiples!.map(pago => ({
           metodoPago: pago.metodoPago,
@@ -341,7 +341,12 @@ export function useSaleProcessing({
         items: items,
         subtotal,
         impuesto: 0,
-        total,
+        total: totalFinal,
+        costoEmpaque: datosEnvio?.costoEmpaque || 0,
+        costoDomicilio: datosEnvio?.costoDomicilio || 0,
+        tipoServicio: datosEnvio?.tipoServicio || "MESA",
+        direccionEnvio: datosEnvio?.direccionEnvio || undefined,
+        telefonoEnvio: datosEnvio?.telefonoEnvio || undefined,
         terminal: { nombre: "Terminal Principal" },
         usuario: { nombre: session?.user?.nombre || "Cajero" }
       };
