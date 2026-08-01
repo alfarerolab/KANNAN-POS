@@ -430,11 +430,10 @@ function PanelPedido() {
               <Select
                 value={cuentaForm.tipoServicio}
                 onValueChange={(val) => {
-                  const nuevoCostoEmpaque = val !== "MESA" && cuentaForm.costoEmpaque === 0 ? 1500 : (val === "MESA" ? 0 : cuentaForm.costoEmpaque);
                   setCuentaForm((prev) => ({
                     ...prev,
                     tipoServicio: val,
-                    costoEmpaque: nuevoCostoEmpaque,
+                    costoEmpaque: 0,
                   }));
                 }}
                 disabled={!pedidoActivo}
@@ -450,24 +449,8 @@ function PanelPedido() {
               </Select>
             </div>
 
-            {cuentaForm.tipoServicio !== "MESA" && (
+            {cuentaForm.tipoServicio === "DOMICILIO" && (
               <div className="space-y-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">
-                    🍱 Costo Recipiente / Empaque ($)
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={500}
-                    value={cuentaForm.costoEmpaque}
-                    onChange={(e) => setCuentaForm((prev) => ({ ...prev, costoEmpaque: Number(e.target.value || 0) }))}
-                    disabled={!pedidoActivo}
-                    className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
-                  />
-                </div>
-
-                {cuentaForm.tipoServicio === "DOMICILIO" && (
                   <>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-orange-800 dark:text-orange-300">

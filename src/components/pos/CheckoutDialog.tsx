@@ -127,7 +127,7 @@ export function CheckoutDialog({
       setMostrarCambio(false);
       setDiasCredito("30"); // Resetear días de crédito
       setTipoServicio("MESA");
-      if (costoEmpaque === 0) setCostoEmpaque(1500);
+      setCostoEmpaque(0);
       setCostoDomicilio(0);
       setDireccionEnvio("");
       setTelefonoEnvio("");
@@ -746,7 +746,7 @@ export function CheckoutDialog({
                   variant={tipoServicio === "LLEVAR" ? "default" : "outline"}
                   onClick={() => {
                     setTipoServicio("LLEVAR");
-                    if (costoEmpaque === 0) setCostoEmpaque(1500);
+                    setCostoEmpaque(0);
                   }}
                   className={`h-10 text-xs font-semibold ${tipoServicio === "LLEVAR" ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-background"}`}
                 >
@@ -757,7 +757,7 @@ export function CheckoutDialog({
                   variant={tipoServicio === "DOMICILIO" ? "default" : "outline"}
                   onClick={() => {
                     setTipoServicio("DOMICILIO");
-                    if (costoEmpaque === 0) setCostoEmpaque(1500);
+                    setCostoEmpaque(0);
                   }}
                   className={`h-10 text-xs font-semibold ${tipoServicio === "DOMICILIO" ? "bg-sky-600 hover:bg-sky-700 text-white" : "bg-background"}`}
                 >
@@ -765,61 +765,44 @@ export function CheckoutDialog({
                 </Button>
               </div>
 
-              {tipoServicio !== "MESA" && (
+              {tipoServicio === "DOMICILIO" && (
                 <div className="space-y-3 pt-2 border-t border-orange-500/20">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-orange-800 dark:text-orange-300">
-                        🍱 Costo Recipientes / Empaques ($)
+                      <label className="text-[11px] font-bold text-sky-800 dark:text-sky-300">
+                        🛵 Costo Envío Domicilio ($)
                       </label>
                       <Input
                         type="number"
                         min={0}
                         step={500}
-                        value={costoEmpaque}
-                        onChange={(e) => setCostoEmpaque(Number(e.target.value || 0))}
-                        className="h-9 bg-background font-bold text-orange-700 dark:text-orange-400"
+                        value={costoDomicilio}
+                        onChange={(e) => setCostoDomicilio(Number(e.target.value || 0))}
+                        className="h-9 bg-background font-bold text-sky-700 dark:text-sky-400"
                       />
                     </div>
-                    {tipoServicio === "DOMICILIO" && (
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-sky-800 dark:text-sky-300">
-                          🛵 Costo Envío Domicilio ($)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={500}
-                          value={costoDomicilio}
-                          onChange={(e) => setCostoDomicilio(Number(e.target.value || 0))}
-                          className="h-9 bg-background font-bold text-sky-700 dark:text-sky-400"
-                        />
-                      </div>
-                    )}
                   </div>
 
-                  {tipoServicio === "DOMICILIO" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold">Dirección de Entrega</label>
-                        <Input
-                          value={direccionEnvio}
-                          onChange={(e) => setDireccionEnvio(e.target.value)}
-                          placeholder="Calle / Carrera #..."
-                          className="h-9 bg-background text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold">Teléfono Contacto</label>
-                        <Input
-                          value={telefonoEnvio}
-                          onChange={(e) => setTelefonoEnvio(e.target.value)}
-                          placeholder="300 000 0000"
-                          className="h-9 bg-background text-xs"
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold">Dirección de Entrega</label>
+                      <Input
+                        value={direccionEnvio}
+                        onChange={(e) => setDireccionEnvio(e.target.value)}
+                        placeholder="Calle / Carrera #..."
+                        className="h-9 bg-background text-xs"
+                      />
                     </div>
-                  )}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold">Teléfono Contacto</label>
+                      <Input
+                        value={telefonoEnvio}
+                        onChange={(e) => setTelefonoEnvio(e.target.value)}
+                        placeholder="300 000 0000"
+                        className="h-9 bg-background text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -848,12 +831,6 @@ export function CheckoutDialog({
                   <span>Subtotal Artículos ({totalItems}):</span>
                   <span>{formatearMoneda(subtotal)}</span>
                 </div>
-                {tipoServicio !== "MESA" && costoEmpaque > 0 && (
-                  <div className="flex justify-between text-sm font-semibold text-amber-700 dark:text-amber-400">
-                    <span>🍱 Empaque / Recipiente:</span>
-                    <span>+{formatearMoneda(costoEmpaque)}</span>
-                  </div>
-                )}
                 {tipoServicio === "DOMICILIO" && costoDomicilio > 0 && (
                   <div className="flex justify-between text-sm font-semibold text-sky-700 dark:text-sky-400">
                     <span>🛵 Envío Domicilio:</span>
