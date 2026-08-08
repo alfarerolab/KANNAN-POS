@@ -71,7 +71,7 @@ const empresaFormSchema = z.object({
     .string()
     .optional()
     .or(z.literal("")),
-  activaFacturacionElectronica: z.boolean().optional().default(false),
+  activaFacturacionElectronica: z.boolean().default(false),
 });
 
 type EmpresaFormValues = z.infer<typeof empresaFormSchema>;
