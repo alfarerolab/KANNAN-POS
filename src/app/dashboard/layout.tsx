@@ -118,7 +118,7 @@ const useNavItems = (
         configuracion?.tipoNegocio === "RESTAURANTE" ||
         configuracion?.tipoNegocio === "CAFETERIA" ||
         configuracion?.tipoNegocio === "PERSONALIZADO";
-        
+
       const mostrarBar = configuracion?.tipoNegocio === "BAR";
 
       items.push(
@@ -140,7 +140,7 @@ const useNavItems = (
           ],
         });
       }
-      
+
       if (mostrarBar) {
         items.push({
           key: 'bar',
@@ -201,7 +201,7 @@ const useNavItems = (
       const childrenCaja = [
         { href: '/dashboard/caja', title: 'Movimientos y Turnos', icon: Wallet }
       ];
-      
+
       if (role === "ADMINISTRADOR") {
         childrenCaja.push(
           { href: '/dashboard/cajas', title: 'Cajas Registradoras', icon: BoxesIcon },
@@ -214,11 +214,11 @@ const useNavItems = (
       }
 
       items.push(
-        { 
-          key: 'caja-group', 
-          href: '/dashboard/caja', 
-          title: 'Caja', 
-          icon: Wallet, 
+        {
+          key: 'caja-group',
+          href: '/dashboard/caja',
+          title: 'Caja',
+          icon: Wallet,
           isActive: pathname.startsWith('/dashboard/caja') || pathname.startsWith('/dashboard/cajas') || pathname.startsWith('/dashboard/terminales'),
           children: childrenCaja
         },
@@ -227,6 +227,7 @@ const useNavItems = (
         { key: 'clientes', href: '/dashboard/clientes', title: 'Clientes', icon: UsersIcon, isActive: pathname.startsWith('/dashboard/clientes') },
         { key: 'inventario', href: '/dashboard/inventario', title: 'Inventario', icon: WarehouseIcon, isActive: pathname.startsWith('/dashboard/inventario') },
         { key: 'proveedores', href: '/dashboard/proveedores', title: 'Proveedores', icon: TruckIcon, isActive: pathname.startsWith('/dashboard/proveedores') },
+        { key: 'facturacion', href: '/dashboard/facturacion-electronica', title: 'Facturación Electrónica', icon: Receipt, isActive: pathname.startsWith('/dashboard/facturacion-electronica') },
         { key: 'reportes', href: '/dashboard/reportes', title: 'Reportes', icon: ClipboardListIcon, isActive: pathname.startsWith('/dashboard/reportes') },
         { key: 'gastos', href: '/dashboard/gastos', title: 'Gastos', icon: TrendingDown, isActive: pathname.startsWith('/dashboard/gastos') }
       );
@@ -242,31 +243,31 @@ const useNavItems = (
       const necesitaConfigInicial = !configuracionCargada || configuracion.tipoNegocio == null;
 
       if (necesitaConfigInicial) {
-        items.push({ 
-          key: 'configuracion-inicial', 
-          href: '/dashboard/configuracion-inicial', 
-          title: 'Configuración Inicial', 
-          icon: Settings, 
-          isActive: pathname.startsWith('/dashboard/configuracion-inicial') 
+        items.push({
+          key: 'configuracion-inicial',
+          href: '/dashboard/configuracion-inicial',
+          title: 'Configuración Inicial',
+          icon: Settings,
+          isActive: pathname.startsWith('/dashboard/configuracion-inicial')
         });
       } else {
-        items.push({ 
-          key: 'configuracion', 
-          href: '/dashboard/configuracion', 
-          title: 'Configuración', 
-          icon: Settings, 
-          isActive: pathname.startsWith('/dashboard/configuracion') 
+        items.push({
+          key: 'configuracion',
+          href: '/dashboard/configuracion',
+          title: 'Configuración',
+          icon: Settings,
+          isActive: pathname.startsWith('/dashboard/configuracion')
         });
       }
     }
 
     if (role === "EMPLEADO") {
-      items.push({ 
-        key: 'clientes', 
-        href: '/dashboard/clientes', 
-        title: 'Clientes', 
-        icon: UsersIcon, 
-        isActive: pathname.startsWith('/dashboard/clientes') 
+      items.push({
+        key: 'clientes',
+        href: '/dashboard/clientes',
+        title: 'Clientes',
+        icon: UsersIcon,
+        isActive: pathname.startsWith('/dashboard/clientes')
       });
     }
 
@@ -309,6 +310,7 @@ const getPageTitle = (pathname: string, role: Rol | undefined): string => {
     "/dashboard/terminales": "Terminales",
     "/dashboard/configuracion-inicial": "Configuración Inicial",
     "/dashboard/configuracion": "Configuración",
+    "/dashboard/facturacion-electronica": "Facturación Electrónica",
     "/dashboard/servicios": "Servicios",
     "/dashboard/citas": "Citas",
     "/dashboard/gastos": "Gastos Operativos",
@@ -336,7 +338,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [empresaData, setEmpresaData] = useState<EmpresaHeaderData | null>(null);
@@ -359,24 +361,24 @@ export default function DashboardLayout({
 
   const userRole = session?.user?.role;
   const userName = session?.user?.nombre || "Usuario";
-  
-  const userInitials = useMemo(() => 
+
+  const userInitials = useMemo(() =>
     userName.split(" ").map(n => n[0]).join("").toUpperCase(),
     [userName]
   );
-  
-  const empresaNombre = useMemo(() => 
+
+  const empresaNombre = useMemo(() =>
     empresaData?.nombre || configuracion?.empresa?.nombre || "Mi Empresa",
     [empresaData, configuracion?.empresa?.nombre]
   );
 
-  const empresaLogo = useMemo(() => 
+  const empresaLogo = useMemo(() =>
     empresaData?.logo || null,
     [empresaData]
   );
 
   const tema = useMemo(() => obtenerTema(), [obtenerTema]);
-  
+
   const tieneServiciosMemo = useMemo(() => tieneServicios(), [tieneServicios]);
   const tieneCitasMemo = useMemo(() => tieneCitas(), [tieneCitas]);
 
@@ -392,7 +394,7 @@ export default function DashboardLayout({
   // ✅ Cargar datos de la empresa en segundo plano
   useEffect(() => {
     if (!session?.user?.empresaId) return;
-    
+
     const cargarDatosEmpresa = async () => {
       try {
         const response = await fetch('/api/empresa');
@@ -412,16 +414,16 @@ export default function DashboardLayout({
   const necesitaConfig = useMemo(() => {
     // Solo los ADMINISTRADORES pueden necesitar configuración inicial
     if (userRole !== "ADMINISTRADOR") return false;
-    
+
     // Si está cargando, NO forzar redirección
     if (estaCargando || !configuracionCargada) return false;
-    
+
     // Solo redirigir si el usuario NO ha completado la configuración inicial
     // Y además no existe configuración en la BD
     if (session?.user?.configuracionCompletada === true) return false;
-    
+
     const sinConfiguracion = !configuracion || !configuracion.tipoNegocio;
-   
+
     return sinConfiguracion;
   }, [userRole, estaCargando, configuracionCargada, configuracion, session?.user?.configuracionCompletada]);
 
@@ -440,7 +442,7 @@ export default function DashboardLayout({
     tieneCitasMemo
   );
 
-  const navItems = useMemo(() => 
+  const navItems = useMemo(() =>
     navItemsData.map(item => {
       if (item.children && item.children.length > 0) {
         return (
@@ -469,7 +471,7 @@ export default function DashboardLayout({
     [navItemsData, sidebarCollapsed, pathname]
   );
 
-  const pageTitle = useMemo(() => 
+  const pageTitle = useMemo(() =>
     getPageTitle(pathname, userRole),
     [pathname, userRole]
   );
@@ -543,7 +545,7 @@ export default function DashboardLayout({
           </div>
           <p className={`${coloresActuales.text} font-medium`}>Configurando espacio de trabajo...</p>
           <div className="mt-4 w-32 h-2 bg-muted rounded-full mx-auto overflow-hidden">
-            <div className={`h-full bg-gradient-to-r ${coloresActuales.primary} rounded-full animate-pulse`} style={{width: '70%'}} />
+            <div className={`h-full bg-gradient-to-r ${coloresActuales.primary} rounded-full animate-pulse`} style={{ width: '70%' }} />
           </div>
         </div>
       </div>
