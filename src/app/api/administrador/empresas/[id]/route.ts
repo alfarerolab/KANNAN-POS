@@ -78,8 +78,8 @@ export async function GET(
   } catch (error) {
     console.error("API: Error al obtener empresa:", error);
     return NextResponse.json(
-      { 
-        message: "Error al obtener empresa", 
+      {
+        message: "Error al obtener empresa",
         error: error instanceof Error ? error.message : 'Error desconocido'
       },
       { status: 500 }
@@ -109,7 +109,7 @@ export async function PATCH(
 
     const { id } = await params; // ⭐ CAMBIO: await params
     const body = await request.json();
-    const { nombre, email, telefono, direccion, logo, activa, fechaVencimiento, notaDesactivacion, tipoNegocio } = body;
+    const { nombre, email, telefono, direccion, logo, activa, fechaVencimiento, notaDesactivacion, tipoNegocio, activaFacturacionElectronica } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -143,6 +143,7 @@ export async function PATCH(
       fechaVencimiento?: Date | null;
       notaDesactivacion?: string;
       tipoNegocio?: TipoNegocio;
+      activaFacturacionElectronica?: boolean;
     } = {};
     if (nombre !== undefined) updateData.nombre = nombre;
     if (email !== undefined) updateData.email = email;
@@ -155,6 +156,7 @@ export async function PATCH(
     }
     if (notaDesactivacion !== undefined) updateData.notaDesactivacion = notaDesactivacion;
     if (tipoNegocio !== undefined) updateData.tipoNegocio = tipoNegocio;
+    if (activaFacturacionElectronica !== undefined) updateData.activaFacturacionElectronica = activaFacturacionElectronica;
 
     // Si se está cambiando el tipo de negocio, actualizar la configuración
     if (tipoNegocio && tipoNegocio !== empresa.tipoNegocio) {
@@ -179,18 +181,18 @@ export async function PATCH(
           throw new Error("❌ No se encontró la nueva configuración del negocio");
         }
 
-      const configData = {
-        tipoNegocio: tipoNegocio as TipoNegocio,
-        habilitarServicios: nuevaConfig.funcionalidades.servicios,
-        habilitarCitas: nuevaConfig.funcionalidades.citas,
-        habilitarVariantes: nuevaConfig.funcionalidades.variantes,
-        habilitarRecetas: nuevaConfig.funcionalidades.recetas,
-        habilitarLotes: nuevaConfig.funcionalidades.lotes,
-        habilitarVencimientos: nuevaConfig.funcionalidades.vencimientos,
-        configuracionPos: JSON.stringify({}),
-        configuracionInventario: JSON.stringify({}),
-        configuracionFactura: JSON.stringify({}),
-      };
+        const configData = {
+          tipoNegocio: tipoNegocio as TipoNegocio,
+          habilitarServicios: nuevaConfig.funcionalidades.servicios,
+          habilitarCitas: nuevaConfig.funcionalidades.citas,
+          habilitarVariantes: nuevaConfig.funcionalidades.variantes,
+          habilitarRecetas: nuevaConfig.funcionalidades.recetas,
+          habilitarLotes: nuevaConfig.funcionalidades.lotes,
+          habilitarVencimientos: nuevaConfig.funcionalidades.vencimientos,
+          configuracionPos: JSON.stringify({}),
+          configuracionInventario: JSON.stringify({}),
+          configuracionFactura: JSON.stringify({}),
+        };
 
         if (configExistente) {
           // Actualizar configuración existente

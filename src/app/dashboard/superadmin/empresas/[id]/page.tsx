@@ -71,6 +71,7 @@ const empresaFormSchema = z.object({
     .string()
     .optional()
     .or(z.literal("")),
+  activaFacturacionElectronica: z.boolean().optional().default(false),
 });
 
 type EmpresaFormValues = z.infer<typeof empresaFormSchema>;
@@ -104,65 +105,67 @@ export default function EditarEmpresaPage({ params }: { params: Promise<{ id: st
       direccion: "",
       activa: true,
       fechaVencimiento: "",
+      activaFacturacionElectronica: false,
     },
   });
 
   useEffect(() => {
-  const fetchEmpresaYUsuarios = async () => {
-    try {
-      const response = await fetch(`/api/administrador/empresas/${id}`);
-      if (!response.ok) throw new Error("Error al cargar la empresa");
-      const data = await response.json();
-      setEmpresa(data);
+    const fetchEmpresaYUsuarios = async () => {
+      try {
+        const response = await fetch(`/api/administrador/empresas/${id}`);
+        if (!response.ok) throw new Error("Error al cargar la empresa");
+        const data = await response.json();
+        setEmpresa(data);
 
-      form.reset({
-        nombre: data.nombre || "",
-        email: data.email || "",
-        telefono: data.telefono || "",
-        direccion: data.direccion || "",
-        activa: data.activa ?? true,
-        fechaVencimiento: data.fechaVencimiento
-          ? new Date(data.fechaVencimiento).toISOString().split('T')[0]
-          : "",
-      });
+        form.reset({
+          nombre: data.nombre || "",
+          email: data.email || "",
+          telefono: data.telefono || "",
+          direccion: data.direccion || "",
+          activa: data.activa ?? true,
+          fechaVencimiento: data.fechaVencimiento
+            ? new Date(data.fechaVencimiento).toISOString().split('T')[0]
+            : "",
+          activaFacturacionElectronica: data.activaFacturacionElectronica ?? false,
+        });
 
-      // 🚀 cargar usuarios inmediatamente
-      const usersResponse = await fetch(`/api/administrador/empresas/${id}/usuarios`);
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        setUsuarios(Array.isArray(usersData) ? usersData : usersData.usuarios || []);
+        // 🚀 cargar usuarios inmediatamente
+        const usersResponse = await fetch(`/api/administrador/empresas/${id}/usuarios`);
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          setUsuarios(Array.isArray(usersData) ? usersData : usersData.usuarios || []);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la información de la empresa",
+          variant: "destructive",
+        });
+        router.push("/dashboard/superadmin/empresas");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la información de la empresa",
-        variant: "destructive",
-      });
-      router.push("/dashboard/superadmin/empresas");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  fetchEmpresaYUsuarios();
-}, [id, form, router, toast]);
+    fetchEmpresaYUsuarios();
+  }, [id, form, router, toast]);
 
   // Función separada para cargar usuarios
   const cargarUsuarios = async () => {
     try {
       setUsuariosLoading(true);
       const usersResponse = await fetch(`/api/administrador/empresas/${id}/usuarios`);
-      
+
       if (!usersResponse.ok) {
         throw new Error(`Error ${usersResponse.status}: ${usersResponse.statusText}`);
       }
-      
+
       const usersData = await usersResponse.json();
-      
+
       // Validar que la respuesta sea un array o tenga un array
       let usuariosArray: Usuario[] = [];
-      
+
       if (Array.isArray(usersData)) {
         usuariosArray = usersData;
       } else if (usersData && Array.isArray(usersData.usuarios)) {
@@ -172,7 +175,7 @@ export default function EditarEmpresaPage({ params }: { params: Promise<{ id: st
       } else {
         usuariosArray = [];
       }
-      
+
       setUsuarios(usuariosArray);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
@@ -394,6 +397,28 @@ export default function EditarEmpresaPage({ params }: { params: Promise<{ id: st
                       />
                       <FormField
                         control={form.control}
+                        name="activaFacturacionElectronica"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 border-primary/20 bg-primary/5">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base text-primary">
+                                Módulo Facturación Electrónica
+                              </FormLabel>
+                              <CardDescription>
+                                Habilitar emisión de comprobantes DIAN
+                              </CardDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
                         name="fechaVencimiento"
                         render={({ field }) => (
                           <FormItem>
@@ -456,8 +481,8 @@ export default function EditarEmpresaPage({ params }: { params: Promise<{ id: st
                       {!Array.isArray(usuarios) || usuarios.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center h-24">
-                            {!Array.isArray(usuarios) 
-                              ? "Error al cargar usuarios" 
+                            {!Array.isArray(usuarios)
+                              ? "Error al cargar usuarios"
                               : "No hay usuarios registrados para esta empresa"
                             }
                           </TableCell>
@@ -473,8 +498,8 @@ export default function EditarEmpresaPage({ params }: { params: Promise<{ id: st
                                   usuario.rol === "ADMINISTRADOR"
                                     ? "default"
                                     : usuario.rol === "GERENTE"
-                                    ? "outline"
-                                    : "secondary"
+                                      ? "outline"
+                                      : "secondary"
                                 }
                               >
                                 {usuario.rol || 'Sin rol'}

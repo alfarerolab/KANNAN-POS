@@ -14,7 +14,7 @@ Este documento sirve como guía paso a paso para la implementación del módulo 
 
 ## Fase 2: Backend y Estructura de Seguridad
 - [x] **Paso 2.1 - Modelo de Permisos (schema.prisma):** Modificar la base de datos para agregar permisos a nivel Empresa o Suscripción asignables por el dueño de la app (ej. `activaFacturacionElectronica: Boolean`, por defecto `false`).
-- [ ] **Paso 2.2 - UI del Super Admin:** Crear o modificar la interfaz de administración de Tenants (Super Admin) para integrar un "ON/OFF" que habilite el módulo para un cliente específico.
+- [x] **Paso 2.2 - UI del Super Admin:** Crear o modificar la interfaz de administración de Tenants (Super Admin) para integrar un "ON/OFF" que habilite el módulo para un cliente específico.
 - [x] **Paso 2.3 - Estructura de Facturas de Venta:** Modificar el esquema `Venta` u orquestar una nueva tabla en `schema.prisma`. Deben existir los campos oficiales:
   - `cufe` (Código Único de Factura Electrónica).
   - `codigoQR` (Texto cifrado para mostrar el QR gráfico).
