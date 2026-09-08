@@ -57,29 +57,29 @@ export const authOptions: NextAuthOptions = {
         contrasena: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials, req) {
+        if (!credentials?.email || !credentials?.contrasena) {
+          return null;
+        }
+
+        // ── Rate Limiting (FUERA del try-catch para que el mensaje llegue al cliente) ──
+        const clientIp =
+          (req?.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+          (req?.headers?.['x-real-ip'] as string) ||
+          '127.0.0.1';
+
+        const ipCheck = await checkRateLimit(LOGIN_RATE_LIMIT, clientIp);
+        if (!ipCheck.allowed) {
+          throw new Error(`Demasiados intentos. Espera ${Math.ceil(ipCheck.retryAfterMs / 1000)} segundos antes de volver a intentarlo.`);
+        }
+
+        const emailCheck = await checkRateLimit(LOGIN_EMAIL_RATE_LIMIT, credentials.email.toLowerCase());
+        if (!emailCheck.allowed) {
+          log.warn(`Rate limit login email: ${credentials.email}`);
+          throw new Error('Demasiados intentos para este correo. Intenta de nuevo más tarde.');
+        }
+        // ─────────────────────────────────────────────────────────────
+
         try {
-          if (!credentials?.email || !credentials?.contrasena) {
-            return null;
-          }
-
-          // ── Rate Limiting ───────────────────────────────────────────
-          const clientIp =
-            (req?.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-            (req?.headers?.['x-real-ip'] as string) ||
-            '127.0.0.1';
-
-          const ipCheck = await checkRateLimit(LOGIN_RATE_LIMIT, clientIp);
-          if (!ipCheck.allowed) {
-            throw new Error(`Demasiados intentos. Intenta de nuevo en ${Math.ceil(ipCheck.retryAfterMs / 1000)}s`);
-          }
-
-          // Rate limit por email
-          const emailCheck = await checkRateLimit(LOGIN_EMAIL_RATE_LIMIT, credentials.email.toLowerCase());
-          if (!emailCheck.allowed) {
-            log.warn(`Rate limit login email: ${credentials.email}`);
-            throw new Error('Demasiados intentos para este correo. Intenta más tarde.');
-          }
-          // ─────────────────────────────────────────────────────────────
 
           log.debug("Auth: buscando usuario", credentials.email);
 
@@ -132,15 +132,15 @@ export const authOptions: NextAuthOptions = {
 
           // ── Bloquear usuarios/empresas inactivas en login ──────────
           if (!user.activo) {
-            throw new Error('Tu cuenta ha sido desactivada. Contacta al administrador.');
+            throw new Error('BLOCK:Tu cuenta ha sido desactivada. Contacta al administrador.');
           }
 
           if (user.esEmpleadoOperativo) {
-            throw new Error('Los empleados operativos no tienen acceso al sistema web.');
+            throw new Error('BLOCK:Los empleados operativos no tienen acceso al sistema web.');
           }
 
           if (!user.empresa?.activa) {
-            throw new Error('La empresa ha sido desactivada. Contacta soporte.');
+            throw new Error('BLOCK:La empresa ha sido desactivada. Contacta soporte.');
           }
 
           const tipoNegocio =
@@ -207,6 +207,10 @@ export const authOptions: NextAuthOptions = {
 
           return authUser;
         } catch (error) {
+          // Re-lanzar errores de negocio conocidos para que lleguen al cliente
+          if (error instanceof Error && error.message.startsWith('BLOCK:')) {
+            throw new Error(error.message.replace('BLOCK:', ''));
+          }
           log.error("Error en authorize:", error);
           return null;
         }

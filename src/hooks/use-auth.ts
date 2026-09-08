@@ -17,7 +17,7 @@ export const useAuth = () => {
   }, []);
 
 
-  
+
 
   const iniciarSesion = useCallback(async (data: ValoresFormularioLogin) => {
     setIsLoading(true);
@@ -31,12 +31,14 @@ export const useAuth = () => {
       });
 
       if (result?.error) {
+        // "CredentialsSignin" = authorize devolvió null (email/contraseña incorrectos)
+        // Cualquier otro mensaje = error lanzado explícitamente (rate limit, cuenta bloqueada, etc.)
         const errorMessage = result.error === "CredentialsSignin"
           ? "Credenciales inválidas. Verifica tu email y contraseña."
-          : "Error de autenticación. Por favor, intenta de nuevo.";
+          : result.error;
 
         setError(errorMessage);
-        toast.error(errorMessage);
+        toast.error(errorMessage, { duration: 6000 });
         return { success: false, error: errorMessage };
       }
 
@@ -112,7 +114,7 @@ export const useAuth = () => {
     });
   };
 
-  
+
 
   return {
     iniciarSesion,
