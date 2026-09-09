@@ -111,8 +111,8 @@ export default function ProductsPage() {
       try {
         setIsLoading(true);
         const [productosResponse, categoriasResponse] = await Promise.all([
-          fetch("/api/productos"),
-          fetch("/api/categorias")
+          fetch("/api/productos?limite=1000"),
+          fetch("/api/categorias?limite=1000")
         ]);
 
         if (!productosResponse.ok) {
@@ -766,8 +766,8 @@ export default function ProductsPage() {
                               <TableCell className="py-2 px-2 lg:px-4">
                                 <div className="flex items-center gap-2">
                                   <span className={`font-bold text-base ${producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
-                                      producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
-                                        "text-green-600 dark:text-green-400"
+                                    producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
+                                      "text-green-600 dark:text-green-400"
                                     }`}>
                                     {producto.enStock}
                                   </span>
@@ -917,8 +917,8 @@ export default function ProductsPage() {
                                     <div className="flex justify-between items-center">
                                       <span className="text-xs text-muted-foreground">Stock:</span>
                                       <span className={`font-semibold text-sm ${producto.enStock === 0 ? "text-red-600 dark:text-red-400" :
-                                          producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
-                                            "text-green-600 dark:text-green-400"
+                                        producto.enStock < producto.stockMinimo ? "text-amber-600 dark:text-amber-400" :
+                                          "text-green-600 dark:text-green-400"
                                         }`}>
                                         {producto.enStock} / {producto.stockMinimo}
                                       </span>

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Opciones de paginación
     const pagina = Math.max(1, Number.parseInt(searchParams.get("pagina") || "1") || 1);
-    const limite = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limite") || "20") || 20));
+    const limite = Math.min(1000, Math.max(1, Number.parseInt(searchParams.get("limite") || "1000") || 1000));
     const omitir = (pagina - 1) * limite;
 
     // Construir la consulta
