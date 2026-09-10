@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const busqueda = url.searchParams.get("busqueda") || "";
     const categoriaId = url.searchParams.get("categoriaId") || undefined;
     const soloDisponibles = url.searchParams.get("soloDisponibles") === "true";
-    const limite = parseInt(url.searchParams.get("limite") || "100");
+    const limite = parseInt(url.searchParams.get("limite") || "500");
     const pagina = parseInt(url.searchParams.get("pagina") || "1");
     const skip = (pagina - 1) * limite;
 
@@ -42,9 +42,9 @@ export async function GET(req: NextRequest) {
     if (busqueda) {
       filtros.OR = [
         { nombre: { contains: busqueda } },
-        { descripcion: { contains: busqueda } }, 
-        { codigoBarras: { contains: busqueda } }, 
-        { sku: { contains: busqueda } }, 
+        { descripcion: { contains: busqueda } },
+        { codigoBarras: { contains: busqueda } },
+        { sku: { contains: busqueda } },
       ];
     }
 
@@ -74,32 +74,32 @@ export async function GET(req: NextRequest) {
       db.producto.count({ where: filtros }),
     ]);
 
-  // Transformar productos y calcular stock virtual para combos
-  // @ts-expect-error Autofix Next15 o tipos implícitos
-  const productosTransformados = productos.map(p => {
-    let stockCalculado = Number(p.enStock);
+    // Transformar productos y calcular stock virtual para combos
+    // @ts-expect-error Autofix Next15 o tipos implícitos
+    const productosTransformados = productos.map(p => {
+      let stockCalculado = Number(p.enStock);
 
-    // Si es combo, calcular stock basado en componentes
-    if (p.esCombo && p.componentes && p.componentes.length > 0) {
-      let minCombos = Infinity;
-      for (const comp of p.componentes) {
-        const stockComponente = Number(comp.componente.enStock);
-        const cantidadRequerida = Number(comp.cantidad);
-        if (cantidadRequerida <= 0) continue;
-        const combosConEste = Math.floor(stockComponente / cantidadRequerida);
-        minCombos = Math.min(minCombos, combosConEste);
+      // Si es combo, calcular stock basado en componentes
+      if (p.esCombo && p.componentes && p.componentes.length > 0) {
+        let minCombos = Infinity;
+        for (const comp of p.componentes) {
+          const stockComponente = Number(comp.componente.enStock);
+          const cantidadRequerida = Number(comp.cantidad);
+          if (cantidadRequerida <= 0) continue;
+          const combosConEste = Math.floor(stockComponente / cantidadRequerida);
+          minCombos = Math.min(minCombos, combosConEste);
+        }
+        stockCalculado = minCombos === Infinity ? 0 : minCombos;
       }
-      stockCalculado = minCombos === Infinity ? 0 : minCombos;
-    }
 
-    return {
-      ...p,
-      enStock: stockCalculado,
-      stockMinimo: Number(p.stockMinimo),
-      precio: Number(p.precio),
-      precioCosto: p.precioCosto ? Number(p.precioCosto) : null,
-    };
-  });
+      return {
+        ...p,
+        enStock: stockCalculado,
+        stockMinimo: Number(p.stockMinimo),
+        precio: Number(p.precio),
+        precioCosto: p.precioCosto ? Number(p.precioCosto) : null,
+      };
+    });
 
 
 
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      datos: productosTransformados, 
+      datos: productosTransformados,
       paginacion: {
         total,
         pagina,
