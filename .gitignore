@@ -54,9 +54,11 @@ yarn-error.log*
 
 
 /public/uploads/*
+/public/uploads/productos/*
 /public/logos/*
 /uploads/*
 !/public/uploads/.gitkeep
+!/public/uploads/productos/.gitkeep
 !/public/logos/.gitkeep
 
 # ========================================

@@ -36,9 +36,8 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`w-full grid h-auto p-1 bg-muted/50 gap-1 ${
-            habilitarVariantes ? "grid-cols-2 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"
-          }`}>
+          <TabsList className={`w-full grid h-auto p-1 bg-muted/50 gap-1 ${habilitarVariantes ? "grid-cols-2 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"
+            }`}>
             <TabsTrigger value="general" className="py-2 px-2 sm:px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md font-medium text-sm whitespace-normal h-auto min-h-[44px] text-center transition-all">
               Información General
             </TabsTrigger>
@@ -67,10 +66,11 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
           </TabsList>
 
           <TabsContent value="general" className="space-y-6 mt-8">
-            <GeneralTab 
-              form={form} 
-              categorias={categorias} 
+            <GeneralTab
+              form={form}
+              categorias={categorias}
               proveedores={proveedores}
+              productoId={productoId}
             />
           </TabsContent>
 
@@ -97,9 +97,9 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
                   <p className="text-sm text-muted-foreground mt-2 max-w-sm">
                     Para poder crear y gestionar variantes (como tallas, colores o medidas), primero debes guardar la información general del producto.
                   </p>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     className="mt-6 border-orange-500/30 text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 hover:text-orange-800 dark:text-orange-300"
                     onClick={() => form.handleSubmit(onSubmit)()}
                   >
@@ -116,8 +116,8 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
           <Link href="/dashboard/productos">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               type="button"
               className="w-full sm:w-auto h-11 px-8 border-input hover:bg-muted transition-all duration-200"
             >
@@ -125,8 +125,8 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
               Cancelar
             </Button>
           </Link>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isSubmitting}
             className="w-full sm:w-auto h-11 px-8"
           >

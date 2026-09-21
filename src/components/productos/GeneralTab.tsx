@@ -1,9 +1,9 @@
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UseFormReturn } from "react-hook-form";
 import type { ProductoFormValues, Categoria } from "@/types/producto";
+import { ImageUploader } from "./ImageUploader";
 
 interface Proveedor {
   id: string;
@@ -15,9 +15,10 @@ interface GeneralTabProps {
   form: UseFormReturn<ProductoFormValues>;
   categorias: Categoria[];
   proveedores: Proveedor[];
+  productoId?: string;
 }
 
-export function GeneralTab({ form, categorias, proveedores }: GeneralTabProps) {
+export function GeneralTab({ form, categorias, proveedores, productoId }: GeneralTabProps) {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <FormField
@@ -29,17 +30,17 @@ export function GeneralTab({ form, categorias, proveedores }: GeneralTabProps) {
               Nombre del Producto *
             </FormLabel>
             <FormControl>
-              <Input 
-                placeholder="Ingresa el nombre del producto" 
+              <Input
+                placeholder="Ingresa el nombre del producto"
                 className="h-11 bg-background border-input focus:border-ring transition-colors duration-200"
-                {...field} 
+                {...field}
               />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="descripcion"
@@ -62,7 +63,7 @@ export function GeneralTab({ form, categorias, proveedores }: GeneralTabProps) {
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="categoriaId"
@@ -132,25 +133,22 @@ export function GeneralTab({ form, categorias, proveedores }: GeneralTabProps) {
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="imagen"
         render={({ field }) => (
           <FormItem className="col-span-2">
             <FormLabel className="text-base font-medium text-foreground">
-              URL de Imagen
+              Imagen del Producto
             </FormLabel>
             <FormControl>
-              <Input 
-                placeholder="https://ejemplo.com/imagen.jpg" 
-                className="h-11 bg-background border-input focus:border-ring transition-colors duration-200"
-                {...field} 
+              <ImageUploader
+                value={field.value || ""}
+                onChange={field.onChange}
+                productoId={productoId}
               />
             </FormControl>
-            <FormDescription className="text-sm text-muted-foreground">
-              URL de una imagen para mostrar el producto
-            </FormDescription>
             <FormMessage />
           </FormItem>
         )}

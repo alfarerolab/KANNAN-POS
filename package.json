@@ -64,6 +64,7 @@
     "react-joyride": "^2.9.3",
     "react-to-print": "^2.14.15",
     "recharts": "^3.0.2",
+    "sharp": "^0.35.4",
     "sonner": "^1.4.3",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
@@ -106,5 +107,9 @@
     "watchpack": "^2.4.0",
     "webpack": "^5.99.0",
     "cookie": "^0.7.0"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "sharp@0.35.4": true
   }
 }
