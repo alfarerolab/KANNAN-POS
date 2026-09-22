@@ -3,7 +3,7 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 
 // Tamaño máximo: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
