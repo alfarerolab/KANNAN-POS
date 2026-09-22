@@ -20,13 +20,17 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [showUrlInput, setShowUrlInput] = useState(false);
     const [urlInputValue, setUrlInputValue] = useState("");
-    const [previewError, setPreviewError] = useState(false);
+    // Preview local antes de subir (objectURL)
+    const [localPreview, setLocalPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const uploadFile = useCallback(async (file: File) => {
         setIsUploading(true);
         setUploadError(null);
-        setPreviewError(false);
+
+        // Mostrar preview local INMEDIATAMENTE mientras sube
+        const objectUrl = URL.createObjectURL(file);
+        setLocalPreview(objectUrl);
 
         try {
             const formData = new FormData();
@@ -48,8 +52,14 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
             }
 
             onChange(data.url);
+            // Liberar objectURL ya que ahora tenemos la URL real
+            URL.revokeObjectURL(objectUrl);
+            setLocalPreview(null);
         } catch (err) {
             setUploadError(err instanceof Error ? err.message : "Error desconocido");
+            // En caso de error, limpiar preview local
+            URL.revokeObjectURL(objectUrl);
+            setLocalPreview(null);
         } finally {
             setIsUploading(false);
         }
@@ -58,6 +68,20 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
     const handleFileSelect = useCallback((files: FileList | null) => {
         if (!files || files.length === 0) return;
         const file = files[0];
+
+        // Validar tipo
+        const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        if (!allowed.includes(file.type)) {
+            setUploadError("Solo se permiten imágenes JPG, PNG o WebP.");
+            return;
+        }
+        // Validar tamaño (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setUploadError("La imagen no puede superar 5MB.");
+            return;
+        }
+
+        setUploadError(null);
         uploadFile(file);
     }, [uploadFile]);
 
@@ -78,7 +102,6 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
     }, [handleFileSelect]);
 
     const handleRemoveImage = useCallback(async () => {
-        // Si es imagen local, eliminarla del servidor
         if (value && value.startsWith("/uploads/")) {
             try {
                 await fetch("/api/upload", {
@@ -86,12 +109,11 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ url: value }),
                 });
-            } catch {
-                // No crítico
-            }
+            } catch { /* no crítico */ }
         }
         onChange("");
-        setPreviewError(false);
+        setLocalPreview(null);
+        setUploadError(null);
     }, [value, onChange]);
 
     const handleUrlSubmit = useCallback(() => {
@@ -99,93 +121,91 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
             onChange(urlInputValue.trim());
             setShowUrlInput(false);
             setUrlInputValue("");
-            setPreviewError(false);
         }
     }, [urlInputValue, onChange]);
 
-    const hasImage = value && value.trim() !== "";
+    // La imagen a mostrar: primero el preview local, luego la URL guardada
+    const displaySrc = localPreview || (value && value.trim() !== "" ? value : null);
 
     return (
-        <div className={cn("space-y-3", className)}>
-            {/* Zona principal */}
-            {hasImage && !previewError ? (
-                /* Vista previa de imagen */
-                <div className="relative group rounded-xl overflow-hidden border border-border bg-muted/30 aspect-square max-w-[200px]">
-                    <Image
-                        src={value}
-                        alt="Imagen del producto"
-                        fill
-                        className="object-contain p-2"
-                        onError={() => setPreviewError(true)}
-                        unoptimized={value.startsWith("/uploads/")}
+        <div className={cn("space-y-2", className)}>
+            {displaySrc ? (
+                /* ── Vista previa de la imagen ── */
+                <div className="relative group rounded-xl overflow-hidden border border-border bg-muted/20 w-[180px] h-[180px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={displaySrc}
+                        alt="Vista previa del producto"
+                        className="w-full h-full object-contain p-2"
                     />
-                    {/* Overlay con acciones */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            className="h-8 px-3 text-xs shadow-lg"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                        >
-                            {isUploading ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                                <Upload className="h-3 w-3 mr-1" />
-                            )}
-                            Cambiar
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className="h-8 px-3 text-xs shadow-lg"
-                            onClick={handleRemoveImage}
-                        >
-                            <X className="h-3 w-3 mr-1" />
-                            Quitar
-                        </Button>
+
+                    {/* Overlay al hacer hover */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        {!isUploading && (
+                            <>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-8 px-3 text-xs shadow-lg"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    Cambiar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-8 px-3 text-xs shadow-lg"
+                                    onClick={handleRemoveImage}
+                                >
+                                    <X className="h-3 w-3 mr-1" />
+                                    Quitar
+                                </Button>
+                            </>
+                        )}
                     </div>
+
+                    {/* Spinner mientras sube */}
+                    {isUploading && (
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2">
+                            <Loader2 className="h-7 w-7 text-white animate-spin" />
+                            <p className="text-white text-xs font-medium">Subiendo...</p>
+                        </div>
+                    )}
                 </div>
             ) : (
-                /* Zona de drop / upload */
+                /* ── Zona de drop / selección ── */
                 <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     onClick={() => !isUploading && fileInputRef.current?.click()}
                     className={cn(
-                        "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer select-none",
-                        "aspect-square max-w-[200px] p-4",
+                        "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer select-none w-[180px] h-[180px]",
                         isDragging
                             ? "border-primary bg-primary/5 scale-[1.02]"
-                            : "border-border hover:border-primary/50 hover:bg-muted/40 bg-muted/20",
-                        isUploading && "pointer-events-none opacity-70"
+                            : "border-border hover:border-primary/50 hover:bg-muted/40 bg-muted/10",
+                        isUploading && "pointer-events-none opacity-60"
                     )}
                 >
                     {isUploading ? (
                         <>
                             <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                            <p className="text-xs text-muted-foreground text-center">Subiendo y optimizando...</p>
+                            <p className="text-xs text-muted-foreground">Subiendo...</p>
                         </>
                     ) : (
                         <>
-                            <div className={cn(
-                                "rounded-full p-3 transition-colors",
-                                isDragging ? "bg-primary/10" : "bg-muted"
-                            )}>
-                                <ImageIcon className={cn(
-                                    "h-6 w-6 transition-colors",
-                                    isDragging ? "text-primary" : "text-muted-foreground"
-                                )} />
+                            <div className={cn("rounded-full p-3 transition-colors", isDragging ? "bg-primary/10" : "bg-muted")}>
+                                <ImageIcon className={cn("h-6 w-6 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
                             </div>
-                            <div className="text-center space-y-1">
+                            <div className="text-center space-y-0.5 px-2">
                                 <p className="text-xs font-medium text-foreground">
-                                    {isDragging ? "Suelta aquí" : "Subir imagen"}
+                                    {isDragging ? "Suelta aquí" : "Sube la imagen"}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground leading-tight">
-                                    JPG, PNG o WebP<br />Máx. 5MB
+                                <p className="text-[10px] text-muted-foreground">
+                                    JPG, PNG o WebP · Máx. 5MB
                                 </p>
                             </div>
                         </>
@@ -193,7 +213,7 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
                 </div>
             )}
 
-            {/* Input de archivo oculto */}
+            {/* Input oculto */}
             <input
                 ref={fileInputRef}
                 type="file"
@@ -203,25 +223,24 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
                 disabled={isUploading}
             />
 
-            {/* Botones de acción adicionales */}
-            {!hasImage && !isUploading && (
+            {/* Opción URL alternativa (solo si no hay imagen) */}
+            {!displaySrc && !isUploading && (
                 <div className="flex items-center gap-2">
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-8 text-xs gap-1.5 border-dashed"
+                        className="h-7 text-[11px] px-2 text-muted-foreground gap-1 hover:text-foreground"
                         onClick={() => setShowUrlInput(!showUrlInput)}
                     >
                         <Link className="h-3 w-3" />
-                        Usar URL
+                        Usar URL externa
                     </Button>
                 </div>
             )}
 
-            {/* Input de URL alternativo */}
             {showUrlInput && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-[280px]">
                     <Input
                         value={urlInputValue}
                         onChange={(e) => setUrlInputValue(e.target.value)}
@@ -229,45 +248,25 @@ export function ImageUploader({ value, onChange, productoId, className }: ImageU
                         className="h-8 text-xs"
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleUrlSubmit())}
                     />
-                    <Button
-                        type="button"
-                        size="sm"
-                        className="h-8 text-xs px-3 shrink-0"
-                        onClick={handleUrlSubmit}
-                    >
-                        OK
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs px-2 shrink-0"
-                        onClick={() => { setShowUrlInput(false); setUrlInputValue(""); }}
-                    >
+                    <Button type="button" size="sm" className="h-8 text-xs px-3 shrink-0" onClick={handleUrlSubmit}>OK</Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-8 px-2 shrink-0" onClick={() => { setShowUrlInput(false); setUrlInputValue(""); }}>
                         <X className="h-3 w-3" />
                     </Button>
                 </div>
             )}
 
-            {/* Error de carga */}
+            {/* Error de upload */}
             {uploadError && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                    <X className="h-3 w-3" />
+                <p className="text-xs text-destructive flex items-center gap-1 w-[280px]">
+                    <X className="h-3 w-3 shrink-0" />
                     {uploadError}
                 </p>
             )}
 
-            {/* Ayuda cuando hay error de preview */}
-            {previewError && hasImage && (
-                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-2 border border-amber-200 dark:border-amber-800">
-                    No se pudo cargar la imagen desde la URL actual. Sube una nueva imagen o verifica la URL.
-                </div>
-            )}
-
-            {/* Info de imagen actual */}
-            {hasImage && !previewError && (
-                <p className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={value}>
-                    {value.startsWith("/uploads/") ? "📁 Imagen local (optimizada)" : "🌐 Imagen desde URL"}
+            {/* Indicador de tipo de imagen guardada */}
+            {value && !localPreview && (
+                <p className="text-[10px] text-muted-foreground truncate w-[180px]" title={value}>
+                    {value.startsWith("/uploads/") ? "📁 Imagen local" : "🌐 URL externa"}
                 </p>
             )}
         </div>
