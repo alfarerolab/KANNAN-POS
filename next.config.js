@@ -9,6 +9,10 @@ const nextConfig = {
     localPatterns: [
       { pathname: '/uploads/**' },
     ],
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -35,7 +39,7 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self'; frame-ancestors 'none'"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; connect-src 'self'; frame-ancestors 'none'"
           }
         ],
       },
