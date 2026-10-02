@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Para UNIDAD y otros: precio es OBLIGATORIO
-      if (!precio || precio === "") {
+      if (precio === undefined || precio === null || precio === "") {
         return NextResponse.json(
           { mensaje: "El precio es obligatorio para productos vendidos por unidad" },
           { status: 400 }
@@ -440,9 +440,9 @@ export async function POST(request: NextRequest) {
       }
 
       precioNumerico = Number(precio);
-      if (isNaN(precioNumerico) || precioNumerico <= 0) {
+      if (isNaN(precioNumerico) || precioNumerico < 0) {
         return NextResponse.json(
-          { mensaje: "El precio debe ser mayor a 0" },
+          { mensaje: "El precio debe ser un número positivo o cero" },
           { status: 400 }
         );
       }

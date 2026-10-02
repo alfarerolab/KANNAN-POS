@@ -223,14 +223,14 @@ export function useProductForm() {
       // - Precio de costo: OPCIONAL
       // - Precio sugerido: OPCIONAL
 
-      if (!data.precio || data.precio === "") {
+      if (data.precio === undefined || data.precio === null || data.precio === "") {
         throw new Error("El precio es obligatorio para este tipo de producto");
       }
 
       formattedData.precio = Number.parseFloat(data.precio);
 
-      if (isNaN(formattedData.precio) || formattedData.precio <= 0) {
-        throw new Error("El precio debe ser mayor a 0");
+      if (isNaN(formattedData.precio) || formattedData.precio < 0) {
+        throw new Error("El precio debe ser un número positivo o cero");
       }
 
       formattedData.precioCosto = data.precioCosto && data.precioCosto !== ""

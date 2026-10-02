@@ -133,8 +133,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
       } else {
         const precioNum = Number(precio);
-        if (isNaN(precioNum) || precioNum <= 0) {
-          return NextResponse.json({ mensaje: "El precio debe ser un número positivo mayor a 0" }, { status: 400 });
+        if (isNaN(precioNum) || precioNum < 0) {
+          return NextResponse.json({ mensaje: "El precio debe ser un número positivo o cero" }, { status: 400 });
         }
       }
     }

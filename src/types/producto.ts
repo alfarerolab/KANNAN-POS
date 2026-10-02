@@ -382,10 +382,10 @@ export const productoFormSchema = z.object({
       });
     } else {
       const precioNum = Number.parseFloat(data.precio);
-      if (isNaN(precioNum) || precioNum <= 0) {
+      if (isNaN(precioNum) || precioNum < 0) {
         ctx.addIssue({
           code: "custom",
-          message: "El precio debe ser mayor a 0",
+          message: "El precio debe ser un número positivo o cero",
           path: ["precio"]
         });
       }
