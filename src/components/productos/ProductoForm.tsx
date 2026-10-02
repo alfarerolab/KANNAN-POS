@@ -14,6 +14,7 @@ import { AdditionalTab } from "./tabs/AdditionalTab";
 import { VariantesManager } from "./VariantesManager";
 import { useConfiguracionEmpresa } from "@/hooks/use-configuracion-empresa";
 import type { UseFormReturn } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 import type { ProductoFormValues, Categoria, Proveedor } from "@/types/producto";
 
 interface ProductFormProps {
@@ -31,10 +32,19 @@ export function ProductForm({ form, categorias, proveedores, onSubmit, isSubmitt
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "general");
   const { configuracion } = useConfiguracionEmpresa();
   const habilitarVariantes = configuracion?.habilitarVariantes ?? false;
+  const { toast } = useToast();
+
+  const onError = (errors: any) => {
+    toast({
+      title: "Faltan campos obligatorios",
+      description: "Por favor revisa las otras pestañas (General, Inventario, etc.) para corregir los errores marcados en rojo.",
+      variant: "destructive",
+    });
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={`w-full grid h-auto p-1 bg-muted/50 gap-1 ${habilitarVariantes ? "grid-cols-2 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"
             }`}>
