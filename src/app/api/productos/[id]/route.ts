@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       precioPorKilo, precioPorGramo, precioPorMetro, precioPorLitro,
       unidadBase, unidadVenta, factorConversion, requiereBalanza, pesoAproximado,
       codigoBarras, sku, imagen, enStock, stockMinimo, activo, categoriaId, proveedorId,
-      esCombo, precioEspecial, diasPrecioEspecial, componentes,
+      esCombo, precioEspecial, diasPrecioEspecial, componentes, manejaVencimiento, fechasVencimiento,
     } = body;
 
     const productoExistente = await db.producto.findFirst({
@@ -223,6 +223,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (esCombo !== undefined) datosActualizacion.esCombo = Boolean(esCombo);
     if (precioEspecial !== undefined) datosActualizacion.precioEspecial = precioEspecial && precioEspecial !== "" ? Number(precioEspecial) : null;
     if (diasPrecioEspecial !== undefined) datosActualizacion.diasPrecioEspecial = diasPrecioEspecial ? JSON.stringify(diasPrecioEspecial) : null;
+    if (manejaVencimiento !== undefined) datosActualizacion.manejaVencimiento = Boolean(manejaVencimiento);
+    if (fechasVencimiento !== undefined) datosActualizacion.fechasVencimiento = fechasVencimiento ? JSON.stringify(fechasVencimiento) : null;
 
     if (componentes !== undefined && Array.isArray(componentes)) {
       datosActualizacion.componentes = { deleteMany: {} };

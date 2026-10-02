@@ -714,7 +714,7 @@ export async function POST(request: NextRequest) {
 
       // ✅ CAMPOS DE VENCIMIENTO
       manejaVencimiento: manejaVencimiento !== undefined ? Boolean(manejaVencimiento) : false,
-      fechasVencimiento: fechasVencimientoValidadas,
+      fechasVencimiento: fechasVencimientoValidadas ? JSON.stringify(fechasVencimientoValidadas) : null,
 
       // ✅ CAMPOS DE COMBO
       esCombo: esCombo ? true : false,
