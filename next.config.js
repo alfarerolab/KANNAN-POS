@@ -41,6 +41,14 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/file/:path*',
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
